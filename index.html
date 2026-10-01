@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Life Hub Calendar</title>
+  <!-- PWA用設定（スマホアプリ化） -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="LifeHub">
+  
+  <!-- Tailwind CSS & Lucide Icons -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    body {
+      background-color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .truncate-1 {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body class="min-h-screen pb-12">
+
+  <!-- ヘッダー / モード切替 -->
+  <header class="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-slate-200 px-4 py-3">
+    <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+      <h1 class="text-xl font-bold bg-gradient-to-r from-sky-600 to-indigo-600 bg-clip-text text-transparent">
+        Life Hub Calendar
+      </h1>
+      
+      <nav class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl w-full sm:w-auto overflow-x-auto">
+        <button onclick="switchMode('all')" id="btn-all" class="mode-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap bg-white text-sky-600 shadow-sm">
+          <i data-lucide="layers" class="w-3.5 h-3.5"></i> 全て
+        </button>
+        <button onclick="switchMode('expense')" id="btn-expense" class="mode-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600">
+          <i data-lucide="wallet" class="w-3.5 h-3.5"></i> 家計簿
+        </button>
+        <button onclick="switchMode('task')" id="btn-task" class="mode-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600">
+          <i data-lucide="check-square" class="w-3.5 h-3.5"></i> タスク
+        </button>
+        <button onclick="switchMode('habit')" id="btn-habit" class="mode-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600">
+          <i data-lucide="repeat" class="w-3.5 h-3.5"></i> 習慣
+        </button>
+        <button onclick="switchMode('analytics')" id="btn-analytics" class="mode-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600">
+          <i data-lucide="bar-chart-3" class="w-3.5 h-3.5"></i> 分析
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="max-w-4xl mx-auto px-3 sm:px-4 pt-4 space-y-4">
+
+    <!-- 全てモード：今日のサマリー -->
+    <div id="section-all-summary" class="bg-gradient-to-r from-sky-500 to-indigo-600 rounded-2xl p-4 text-white shadow-lg">
+      <h2 className="text-xs font-semibold text-sky-100 flex items-center gap-1 mb-2">
+        <i data-lucide="clock" class="w-3.5 h-3.5 inline"></i> 本日のサマリー
+      </h2>
+      <div class="grid sm:grid-cols-2 gap-3 text-sm">
+        <div class="bg-white/10 backdrop-blur-md rounded-xl p-3">
+          <span class="text-xs text-sky-200 block mb-1">本日の予定</span>
+          <div id="today-events-list" class="font-medium text-xs">予定はありません</div>
+        </div>
+        <div class="bg-white/10 backdrop-blur-md rounded-xl p-3">
+          <span class="text-xs text-sky-200 block mb-1">本日のタスク</span>
+          <div id="today-tasks-list" class="font-medium text-xs">タスクはありません</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 家計簿モード：入力エリア -->
+    <div id="section-expense-form" class="hidden bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
+      <h2 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-1.5">
+        <i data-lucide="plus" class="w-4 h-4 text-emerald-600"></i> 支出の登録
+      </h2>
+      <form onsubmit="addExpense(event)" class="grid grid-cols-2 sm:grid-cols-5 gap-2">
+        <input type="date" id="exp-date" class="col-span-2 sm:col-span-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm outline-none" required>
+        <input type="number" id="exp-amount" placeholder="金額 (円)" class="border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm outline-none" required>
+        <select id="exp-cat" class="border border-slate-200 rounded-lg px-2 py-1.5 text-sm outline-none bg-white">
+          <option value="食費">食費</option>
+          <option value="日用品">日用品</option>
+          <option value="交通費">交通費</option>
+          <option value="趣味・娯楽">趣味・娯楽</option>
+          <option value="固定費">固定費</option>
+          <option value="その他">その他</option>
+        </select>
+        <input type="text" id="exp-memo" placeholder="メモ" class="border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm outline-none">
+        <button type="submit" class="col-span-2 sm:col-span-1 bg-emerald-600 text-white font-medium rounded-lg px-3 py-1.5 text-sm">追加</button>
+      </form>
+    </div>
+
+    <!-- タスクモード：入力エリア -->
+    <div id="section-task-form" class="hidden bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
+      <h2 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-1.5">
+        <i data-lucide="plus" class="w-4 h-4 text-indigo-600"></i> タスクの追加
+      </h2>
+      <form onsubmit="addTask(event)" class="flex gap-2">
+        <input type="date" id="task-date" class="border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm outline-none" required>
+        <input type="text" id="task-title" placeholder="タスク内容を入力..." class="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm outline-none" required>
+        <button type="submit" class="bg-indigo-600 text-white font-medium rounded-lg px-4 py-1.5 text-sm whitespace-nowrap">追加</button>
+      </form>
+    </div>
+
+    <!-- 習慣トラッカーモード -->
+    <div id="section-habit" class="hidden space-y-4">
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
+        <h2 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-1.5">
+          <i data-lucide="plus" class="w-4 h-4 text-amber-600"></i> 新しい習慣の追加
+        </h2>
+        <form onsubmit="addHabit(event)" class="flex gap-2">
+          <input type="text" id="habit-name" placeholder="例: 毎日読書15分" class="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm outline-none" required>
+          <button type="submit" class="bg-amber-600 text-white font-medium rounded-lg px-4 py-1.5 text-sm whitespace-nowrap">追加</button>
+        </form>
+      </div>
+      <div id="habit-list" class="grid sm:grid-cols-2 gap-3"></div>
+    </div>
+
+    <!-- 分析モード -->
+    <div id="section-analytics" class="hidden bg-white rounded-2xl p-5 shadow-sm border border-slate-200 space-y-4">
+      <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+        <i data-lucide="bar-chart-3" class="w-5 h-5 text-purple-600"></i> 今月の支出分析
+      </h2>
+      <div class="p-4 bg-purple-50 rounded-xl border border-purple-100">
+        <span class="text-xs text-purple-700 font-semibold block">今月の総支出</span>
+        <span id="analytics-total" class="text-2xl font-black text-purple-900">¥0</span>
+      </div>
+      <div id="analytics-categories" class="space-y-2"></div>
+    </div>
+
+    <!-- カレンダー本体 -->
+    <div id="section-calendar" class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div class="flex items-center justify-between p-4 border-b border-slate-100">
+        <h2 id="calendar-month-label" class="text-lg font-bold text-slate-800">2026年 10月</h2>
+        <div class="flex items-center gap-1">
+          <button onclick="changeMonth(-1)" class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600"><i data-lucide="chevron-left" class="w-5 h-5"></i></button>
+          <button onclick="changeMonth(1)" class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600"><i data-lucide="chevron-right" class="w-5 h-5"></i></button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-7 text-center bg-slate-50 border-b border-slate-100 text-xs font-semibold py-2">
+        <span class="text-rose-500">日</span>
+        <span class="text-slate-600">月</span>
+        <span class="text-slate-600">火</span>
+        <span class="text-slate-600">水</span>
+        <span class="text-slate-600">木</span>
+        <span class="text-slate-600">金</span>
+        <span class="text-sky-500">土</span>
+      </div>
+
+      <div id="calendar-grid" class="grid grid-cols-7 auto-rows-fr divide-x divide-y divide-slate-100"></div>
+
+      <div id="expense-total-footer" class="hidden bg-emerald-50 border-t border-emerald-100 p-4 flex justify-between items-center">
+        <span class="text-sm font-bold text-emerald-900">今月の合計使用金額</span>
+        <span id="monthly-total-amount" class="text-xl font-black text-emerald-700">¥0</span>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- 詳細ダイアログ -->
+  <div id="detail-modal" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 id="modal-date-title" class="font-bold text-slate-800">日付詳細</h3>
+        <button onclick="closeModal()" class="p-1 rounded-lg hover:bg-slate-100 text-slate-500"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div id="modal-content" class="space-y-3 max-h-[60vh] overflow-y-auto"></div>
+    </div>
+  </div>
+
+  <script>
+    // 初期データ
+    let currentMode = 'all';
+    let currentDate = new Date();
+
+    let events = [
+      { id: '1', date: '2026-10-01', title: 'チームミーティング', time: '10:00' },
+      { id: '2', date: '2026-10-05', title: '最終提出確認', time: '18:00' }
+    ];
+    let tasks = [
+      { id: '1', date: '2026-10-01', title: '資料の印刷', completed: false }
+    ];
+    let expenses = [
+      { id: '1', date: '2026-10-01', amount: 850, category: '食費', memo: 'ランチ' }
+    ];
+    let habits = [
+      { id: '1', name: '毎日の読書 (15分)', count: 3 }
+    ];
+
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('exp-date').value = todayStr;
+      document.getElementById('task-date').value = todayStr;
+      render();
+    });
+
+    function switchMode(mode) {
+      currentMode = mode;
+      document.querySelectorAll('.mode-btn').forEach(btn => {
+        btn.className = 'mode-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600';
+      });
+      const activeBtn = document.getElementById(`btn-${mode}`);
+      if(activeBtn) activeBtn.className = 'mode-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap bg-white text-sky-600 shadow-sm';
+
+      document.getElementById('section-all-summary').classList.toggle('hidden', mode !== 'all');
+      document.getElementById('section-expense-form').classList.toggle('hidden', mode !== 'expense');
+      document.getElementById('section-task-form').classList.toggle('hidden', mode !== 'task');
+      document.getElementById('section-habit').classList.toggle('hidden', mode !== 'habit');
+      document.getElementById('section-analytics').classList.toggle('hidden', mode !== 'analytics');
+      document.getElementById('section-calendar').classList.toggle('hidden', mode === 'habit' || mode === 'analytics');
+      document.getElementById('expense-total-footer').classList.toggle('hidden', mode !== 'expense');
+
+      render();
+    }
+
+    function render() {
+      lucide.createIcons();
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+
+      document.getElementById('calendar-month-label').innerText = `${year}年 ${month + 1}月`;
+
+      if (currentMode === 'all' || currentMode === 'expense' || currentMode === 'task') {
+        renderCalendar(year, month);
+      }
+      if (currentMode === 'all') renderSummary();
+      if (currentMode === 'habit') renderHabits();
+      if (currentMode === 'analytics') renderAnalytics(year, month);
+    }
+
+    function renderCalendar(year, month) {
+      const grid = document.getElementById('calendar-grid');
+      grid.innerHTML = '';
+
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const firstDay = new Date(year, month, 1).getDay();
+
+      for (let i = 0; i < firstDay; i++) {
+        grid.innerHTML += `<div class="bg-slate-50/50 min-h-[90px] sm:min-h-[110px]"></div>`;
+      }
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const mStr = String(month + 1).padStart(2, '0');
+        const dStr = String(day).padStart(2, '0');
+        const dateStr = `${year}-${mStr}-${dStr}`;
+        const isToday = dateStr === todayStr;
+
+        const dayEvents = events.filter(e => e.date === dateStr);
+        const dayTasks = tasks.filter(t => t.date === dateStr);
+        const dayExpenses = expenses.filter(e => e.date === dateStr);
+        const dayTotalExp = dayExpenses.reduce((s, e) => s + Number(e.amount), 0);
+
+        let eventsHtml = '';
+        if (currentMode === 'all') {
+          dayEvents.forEach(e => {
+            eventsHtml += `<div class="bg-sky-100 text-sky-800 text-[10px] sm:text-xs rounded px-1 py-0.5 mb-0.5 truncate-1 font-medium">${e.title}</div>`;
+          });
+        }
+
+        let tasksHtml = '';
+        if (currentMode === 'all' || currentMode === 'task') {
+          dayTasks.forEach(t => {
+            tasksHtml += `<div class="bg-indigo-100 text-indigo-800 text-[10px] sm:text-xs rounded px-1 py-0.5 mb-0.5 truncate-1 font-medium">✓ ${t.title}</div>`;
+          });
+        }
+
+        let expHtml = '';
+        if ((currentMode === 'all' || currentMode === 'expense') && dayTotalExp > 0) {
+          expHtml = `<div class="text-right"><span class="bg-emerald-100 text-emerald-800 text-[10px] sm:text-xs font-bold px-1 py-0.5 rounded inline-block">¥${dayTotalExp.toLocaleString()}</span></div>`;
+        }
+
+        grid.innerHTML += `
+          <div onclick="openModal('${dateStr}')" class="min-h-[90px] sm:min-h-[110px] p-1 sm:p-1.5 cursor-pointer hover:bg-sky-50/30 transition-colors flex flex-col justify-between ${isToday ? 'bg-sky-50/50' : ''}">
+            <div>
+              <div class="flex justify-between items-center mb-1">
+                <span class="text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center ${isToday ? 'bg-sky-600 text-white' : 'text-slate-700'}">${day}</span>
+              </div>
+              ${eventsHtml}
+              ${tasksHtml}
+            </div>
+            ${expHtml}
+          </div>
+        `;
+      }
+
+      // 家計簿合計
+      const monthlyTotal = expenses
+        .filter(e => {
+          const d = new Date(e.date);
+          return d.getFullYear() === year && d.getMonth() === month;
+        })
+        .reduce((s, e) => s + Number(e.amount), 0);
+      document.getElementById('monthly-total-amount').innerText = `¥${monthlyTotal.toLocaleString()}`;
+    }
+
+    function renderSummary() {
+      const todayEvts = events.filter(e => e.date === todayStr);
+      const todayTsks = tasks.filter(t => t.date === todayStr);
+
+      document.getElementById('today-events-list').innerHTML = todayEvts.length > 0 
+        ? todayEvts.map(e => `<div>${e.time || ''} ${e.title}</div>`).join('')
+        : '予定はありません';
+
+      document.getElementById('today-tasks-list').innerHTML = todayTsks.length > 0 
+        ? todayTsks.map(t => `<div>✓ ${t.title}</div>`).join('')
+        : 'タスクはありません';
+    }
+
+    function renderHabits() {
+      const container = document.getElementById('habit-list');
+      container.innerHTML = habits.map(h => `
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+          <div>
+            <h3 class="font-semibold text-slate-800 text-sm">${h.name}</h3>
+            <p class="text-xs text-slate-500 mt-0.5">達成: <span class="font-bold text-amber-600 text-base">${h.count}</span> 回</p>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button onclick="countHabit('${h.id}')" class="bg-amber-100 text-amber-800 text-xs font-bold px-3 py-2 rounded-xl">+1 カウント</button>
+            <button onclick="deleteHabit('${h.id}')" class="text-slate-400 hover:text-rose-500 p-1.5"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+          </div>
+        </div>
+      `).join('');
+      lucide.createIcons();
+    }
+
+    function renderAnalytics(year, month) {
+      const monthlyExp = expenses.filter(e => {
+        const d = new Date(e.date);
+        return d.getFullYear() === year && d.getMonth() === month;
+      });
+      const total = monthlyExp.reduce((s, e) => s + Number(e.amount), 0);
+      document.getElementById('analytics-total').innerText = `¥${total.toLocaleString()}`;
+
+      const cats = ['食費', '日用品', '交通費', '趣味・娯楽', '固定費', 'その他'];
+      const catContainer = document.getElementById('analytics-categories');
+      catContainer.innerHTML = cats.map(cat => {
+        const catTotal = monthlyExp.filter(e => e.category === cat).reduce((s, e) => s + Number(e.amount), 0);
+        const percent = total > 0 ? Math.round((catTotal / total) * 100) : 0;
+        return `
+          <div class="space-y-1">
+            <div class="flex justify-between text-xs font-medium text-slate-600">
+              <span>${cat}</span>
+              <span>¥${catTotal.toLocaleString()} (${percent}%)</span>
+            </div>
+            <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+              <div class="bg-purple-500 h-full rounded-full" style="width: ${percent}%"></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function changeMonth(diff) {
+      currentDate.setMonth(currentDate.getMonth() + diff);
+      render();
+    }
+
+    function addExpense(e) {
+      e.preventDefault();
+      expenses.push({
+        id: Date.now().toString(),
+        date: document.getElementById('exp-date').value,
+        amount: Number(document.getElementById('exp-amount').value),
+        category: document.getElementById('exp-cat').value,
+        memo: document.getElementById('exp-memo').value
+      });
+      document.getElementById('exp-amount').value = '';
+      document.getElementById('exp-memo').value = '';
+      render();
+    }
+
+    function addTask(e) {
+      e.preventDefault();
+      tasks.push({
+        id: Date.now().toString(),
+        date: document.getElementById('task-date').value,
+        title: document.getElementById('task-title').value,
+        completed: false
+      });
+      document.getElementById('task-title').value = '';
+      render();
+    }
+
+    function addHabit(e) {
+      e.preventDefault();
+      habits.push({ id: Date.now().toString(), name: document.getElementById('habit-name').value, count: 0 });
+      document.getElementById('habit-name').value = '';
+      renderHabits();
+    }
+
+    function countHabit(id) {
+      const h = habits.find(x => x.id === id);
+      if (h) h.count++;
+      renderHabits();
+    }
+
+    function deleteHabit(id) {
+      habits = habits.filter(x => x.id !== id);
+      renderHabits();
+    }
+
+    function openModal(dateStr) {
+      document.getElementById('modal-date-title').innerText = `${dateStr} の詳細`;
+      const dayEvts = events.filter(e => e.date === dateStr);
+      const dayTsks = tasks.filter(t => t.date === dateStr);
+      const dayExps = expenses.filter(e => e.date === dateStr);
+
+      let html = `
+        <div>
+          <h4 class="text-xs font-bold text-sky-600 mb-1.5">予定</h4>
+          ${dayEvts.length > 0 ? dayEvts.map(e => `<div class="p-2 bg-sky-50 rounded-lg text-xs font-medium text-sky-900 mb-1">${e.time \vert{}\vert{} ''}${e.title}</div>`).join('') : '<p class="text-xs text-slate-400">予定なし</p>'}
+        </div>
+        <div>
+          <h4 class="text-xs font-bold text-indigo-600 mb-1.5">タスク</h4>
+          ${dayTsks.length > 0 ? dayTsks.map(t => `<div class="p-2 bg-indigo-50 rounded-lg text-xs font-medium text-indigo-900 mb-1">✓ ${t.title}</div>`).join('') : '<p class="text-xs text-slate-400">タスクなし</p>'}
+        </div>
+        <div>
+          <h4 class="text-xs font-bold text-emerald-600 mb-1.5">支出内訳</h4>
+          ${dayExps.length > 0 ? dayExps.map(e => `<div class="p-2 bg-emerald-50 rounded-lg text-xs font-medium text-emerald-900 mb-1 flex justify-between"><span>[${e.category}]${e.memo || ''}</span><span class="font-bold">¥${Number(e.amount).toLocaleString()}</span></div>`).join('') : '<p class="text-xs text-slate-400">支出なし</p>'}
+        </div>
+      `;
+      document.getElementById('modal-content').innerHTML = html;
+      document.getElementById('detail-modal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('detail-modal').classList.add('hidden');
+    }
+  </script>
+</body>
+</html>
