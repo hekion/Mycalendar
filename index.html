@@ -3,435 +3,602 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Life Hub Calendar</title>
-  <!-- PWA用設定（スマホアプリ化） -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="LifeHub">
+  <title>MyLife App</title>
   
-  <!-- Tailwind CSS & Lucide Icons -->
+  <!-- PWA Settings for iPhone/Android -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MyLife">
+  
+  <!-- Tailwind CSS & Lucide Icons & Chart.js -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Google API / Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://apis.google.com/js/api.js" async defer></script>
 
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background-color: #f8fafc;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       -webkit-tap-highlight-color: transparent;
     }
+    /* カレンダーセル固定・はみ出し防止 */
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      table-layout: fixed;
+    }
+    .calendar-cell {
+      min-height: 85px;
+    }
+    @media (max-width: 640px) {
+      .calendar-cell {
+        min-height: 65px;
+      }
+    }
+    /* テキスト1行省略 */
     .truncate-1 {
+      white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      white-space: nowrap;
+    }
+    /* カスタムスクロールバー */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
     }
   </style>
 </head>
-<body class="min-h-screen pb-12">
+<body class="text-slate-800 antialiased min-h-screen flex flex-col pb-12">
 
-  <!-- ヘッダー / モード切替 -->
-  <header class="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-slate-200 px-4 py-3">
-    <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-      <h1 class="text-xl font-bold bg-gradient-to-r from-sky-600 to-indigo-600 bg-clip-text text-transparent">
-        Life Hub Calendar
-      </h1>
-      
-      <nav class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl w-full sm:w-auto overflow-x-auto">
-        <button onclick="switchMode('all')" id="btn-all" class="mode-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap bg-white text-sky-600 shadow-sm">
-          <i data-lucide="layers" class="w-3.5 h-3.5"></i> 全て
+  <!-- 設定（スクリプトから自動設定されます） -->
+  <script>
+    const CLIENT_ID = '1068662457579-mjlsd7blb627089v06hd4i2td53uu8gn.apps.googleusercontent.com';
+    const SPREADSHEET_ID = '1tpi8xp5YMz-Cw3Jtk9xSAgQUg6_Hi9gj1n2dI5_VKqg';
+    const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/spreadsheets';
+  </script>
+
+  <!-- ヘッダー -->
+  <header class="bg-white/80 backdrop-blur-md sticky top-0 z-30 border-b border-slate-200 px-4 py-3 shadow-sm">
+    <div class="max-w-5xl mx-auto flex items-center justify-between">
+      <div class="flex items-center space-x-2">
+        <div class="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold shadow-indigo-200 shadow-lg">
+          M
+        </div>
+        <h1 class="text-xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
+          MyLife App
+        </h1>
+      </div>
+      <div class="flex items-center space-x-2">
+        <button id="auth-btn" onclick="handleAuthClick()" class="flex items-center space-x-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-3.5 py-1.5 rounded-full text-xs font-semibold transition">
+          <i data-lucide="log-in" class="w-4 h-4"></i>
+          <span id="auth-btn-text">Google 連携</span>
         </button>
-        <button onclick="switchMode('expense')" id="btn-expense" class="mode-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600">
-          <i data-lucide="wallet" class="w-3.5 h-3.5"></i> 家計簿
-        </button>
-        <button onclick="switchMode('task')" id="btn-task" class="mode-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600">
-          <i data-lucide="check-square" class="w-3.5 h-3.5"></i> タスク
-        </button>
-        <button onclick="switchMode('habit')" id="btn-habit" class="mode-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600">
-          <i data-lucide="repeat" class="w-3.5 h-3.5"></i> 習慣
-        </button>
-        <button onclick="switchMode('analytics')" id="btn-analytics" class="mode-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600">
-          <i data-lucide="bar-chart-3" class="w-3.5 h-3.5"></i> 分析
-        </button>
-      </nav>
+      </div>
     </div>
   </header>
 
-  <main class="max-w-4xl mx-auto px-3 sm:px-4 pt-4 space-y-4">
+  <!-- メインコンテンツ -->
+  <main class="max-w-5xl mx-auto w-full px-3 sm:px-6 pt-4 flex-1">
 
-    <!-- 全てモード：今日のサマリー -->
-    <div id="section-all-summary" class="bg-gradient-to-r from-sky-500 to-indigo-600 rounded-2xl p-4 text-white shadow-lg">
-      <h2 className="text-xs font-semibold text-sky-100 flex items-center gap-1 mb-2">
-        <i data-lucide="clock" class="w-3.5 h-3.5 inline"></i> 本日のサマリー
-      </h2>
-      <div class="grid sm:grid-cols-2 gap-3 text-sm">
-        <div class="bg-white/10 backdrop-blur-md rounded-xl p-3">
-          <span class="text-xs text-sky-200 block mb-1">本日の予定</span>
-          <div id="today-events-list" class="font-medium text-xs">予定はありません</div>
+    <!-- モード切り替えタブ -->
+    <nav class="flex space-x-1 bg-slate-200/60 p-1 rounded-2xl mb-5 overflow-x-auto text-xs sm:text-sm font-medium no-scrollbar">
+      <button onclick="switchMode('all')" id="tab-all" class="mode-tab flex-1 min-w-[70px] py-2 px-3 rounded-xl transition text-center shadow-sm bg-white text-indigo-600 font-bold">すべて</button>
+      <button onclick="switchMode('calendar')" id="tab-calendar" class="mode-tab flex-1 min-w-[70px] py-2 px-3 rounded-xl transition text-center text-slate-600 hover:text-slate-900">予定</button>
+      <button onclick="switchMode('task')" id="tab-task" class="mode-tab flex-1 min-w-[70px] py-2 px-3 rounded-xl transition text-center text-slate-600 hover:text-slate-900">タスク</button>
+      <button onclick="switchMode('finance')" id="tab-finance" class="mode-tab flex-1 min-w-[70px] py-2 px-3 rounded-xl transition text-center text-slate-600 hover:text-slate-900">家計簿</button>
+      <button onclick="switchMode('analytics')" id="tab-analytics" class="mode-tab flex-1 min-w-[70px] py-2 px-3 rounded-xl transition text-center text-slate-600 hover:text-slate-900">分析</button>
+      <button onclick="switchMode('habit')" id="tab-habit" class="mode-tab flex-1 min-w-[70px] py-2 px-3 rounded-xl transition text-center text-slate-600 hover:text-slate-900">習慣</button>
+    </nav>
+
+    <!-- モード 1: すべてモード（今日の予定＆タスクサマリー） -->
+    <section id="section-all-summary" class="mode-section mb-5">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- 今日の予定 -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-bold text-slate-700 flex items-center gap-1.5">
+              <i data-lucide="calendar" class="w-4 h-4 text-indigo-500"></i> 今日の予定
+            </h2>
+            <span id="today-date-str" class="text-xs text-slate-400"></span>
+          </div>
+          <div id="today-events-list" class="space-y-2 text-xs text-slate-600">
+            <p class="text-slate-400 italic">連携後、今日の予定が表示されます</p>
+          </div>
         </div>
-        <div class="bg-white/10 backdrop-blur-md rounded-xl p-3">
-          <span class="text-xs text-sky-200 block mb-1">本日のタスク</span>
-          <div id="today-tasks-list" class="font-medium text-xs">タスクはありません</div>
+
+        <!-- 今日のタスク -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-bold text-slate-700 flex items-center gap-1.5">
+              <i data-lucide="check-square" class="w-4 h-4 text-emerald-500"></i> 本日のタスク
+            </h2>
+          </div>
+          <div id="today-tasks-list" class="space-y-2 text-xs text-slate-600">
+            <p class="text-slate-400 italic">連携後、タスクが表示されます</p>
+          </div>
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- 家計簿モード：入力エリア -->
-    <div id="section-expense-form" class="hidden bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
-      <h2 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-1.5">
-        <i data-lucide="plus" class="w-4 h-4 text-emerald-600"></i> 支出の登録
-      </h2>
-      <form onsubmit="addExpense(event)" class="grid grid-cols-2 sm:grid-cols-5 gap-2">
-        <input type="date" id="exp-date" class="col-span-2 sm:col-span-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm outline-none" required>
-        <input type="number" id="exp-amount" placeholder="金額 (円)" class="border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm outline-none" required>
-        <select id="exp-cat" class="border border-slate-200 rounded-lg px-2 py-1.5 text-sm outline-none bg-white">
-          <option value="食費">食費</option>
-          <option value="日用品">日用品</option>
-          <option value="交通費">交通費</option>
-          <option value="趣味・娯楽">趣味・娯楽</option>
-          <option value="固定費">固定費</option>
-          <option value="その他">その他</option>
-        </select>
-        <input type="text" id="exp-memo" placeholder="メモ" class="border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm outline-none">
-        <button type="submit" class="col-span-2 sm:col-span-1 bg-emerald-600 text-white font-medium rounded-lg px-3 py-1.5 text-sm">追加</button>
-      </form>
-    </div>
-
-    <!-- タスクモード：入力エリア -->
-    <div id="section-task-form" class="hidden bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
-      <h2 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-1.5">
-        <i data-lucide="plus" class="w-4 h-4 text-indigo-600"></i> タスクの追加
-      </h2>
-      <form onsubmit="addTask(event)" class="flex gap-2">
-        <input type="date" id="task-date" class="border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm outline-none" required>
-        <input type="text" id="task-title" placeholder="タスク内容を入力..." class="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm outline-none" required>
-        <button type="submit" class="bg-indigo-600 text-white font-medium rounded-lg px-4 py-1.5 text-sm whitespace-nowrap">追加</button>
-      </form>
-    </div>
-
-    <!-- 習慣トラッカーモード -->
-    <div id="section-habit" class="hidden space-y-4">
-      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
-        <h2 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-1.5">
-          <i data-lucide="plus" class="w-4 h-4 text-amber-600"></i> 新しい習慣の追加
-        </h2>
-        <form onsubmit="addHabit(event)" class="flex gap-2">
-          <input type="text" id="habit-name" placeholder="例: 毎日読書15分" class="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm outline-none" required>
-          <button type="submit" class="bg-amber-600 text-white font-medium rounded-lg px-4 py-1.5 text-sm whitespace-nowrap">追加</button>
+    <!-- フォームエリア：予定・タスク・家計簿の入力（モード別に表示切り替え） -->
+    <section id="input-section" class="mb-5 hidden">
+      <!-- 予定登録フォーム -->
+      <div id="form-calendar" class="input-form bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hidden">
+        <h3 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-1.5"><i data-lucide="plus-circle" class="w-4 h-4 text-indigo-500"></i> 予定の追加（Googleカレンダー）</h3>
+        <form onsubmit="addCalendarEvent(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+          <input type="text" id="event-title" placeholder="予定のタイトル" required class="sm:col-span-3 p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500">
+          <input type="datetime-local" id="event-start" required class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500">
+          <input type="datetime-local" id="event-end" required class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500">
+          <button type="submit" class="p-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition">追加する</button>
         </form>
       </div>
-      <div id="habit-list" class="grid sm:grid-cols-2 gap-3"></div>
-    </div>
 
-    <!-- 分析モード -->
-    <div id="section-analytics" class="hidden bg-white rounded-2xl p-5 shadow-sm border border-slate-200 space-y-4">
-      <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
-        <i data-lucide="bar-chart-3" class="w-5 h-5 text-purple-600"></i> 今月の支出分析
-      </h2>
-      <div class="p-4 bg-purple-50 rounded-xl border border-purple-100">
-        <span class="text-xs text-purple-700 font-semibold block">今月の総支出</span>
-        <span id="analytics-total" class="text-2xl font-black text-purple-900">¥0</span>
+      <!-- タスク登録フォーム -->
+      <div id="form-task" class="input-form bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hidden">
+        <h3 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-1.5"><i data-lucide="plus-circle" class="w-4 h-4 text-emerald-500"></i> タスクの追加（Google Tasks）</h3>
+        <form onsubmit="addTaskItem(event)" class="flex gap-2 text-xs">
+          <input type="text" id="task-title" placeholder="新しいタスク..." required class="flex-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-emerald-500">
+          <input type="date" id="task-due" class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-emerald-500">
+          <button type="submit" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition whitespace-nowrap">追加</button>
+        </form>
       </div>
-      <div id="analytics-categories" class="space-y-2"></div>
-    </div>
 
-    <!-- カレンダー本体 -->
-    <div id="section-calendar" class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-      <div class="flex items-center justify-between p-4 border-b border-slate-100">
-        <h2 id="calendar-month-label" class="text-lg font-bold text-slate-800">2026年 10月</h2>
-        <div class="flex items-center gap-1">
-          <button onclick="changeMonth(-1)" class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600"><i data-lucide="chevron-left" class="w-5 h-5"></i></button>
-          <button onclick="changeMonth(1)" class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600"><i data-lucide="chevron-right" class="w-5 h-5"></i></button>
+      <!-- 家計簿登録フォーム -->
+      <div id="form-finance" class="input-form bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hidden">
+        <h3 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-1.5"><i data-lucide="plus-circle" class="w-4 h-4 text-rose-500"></i> 支出の記録（スプレッドシート）</h3>
+        <form onsubmit="addExpenseRecord(event)" class="grid grid-cols-2 sm:grid-cols-5 gap-2.5 text-xs">
+          <input type="date" id="expense-date" required class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-rose-500">
+          <input type="number" id="expense-amount" placeholder="金額 (円)" required class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-rose-500">
+          <select id="expense-category" class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-rose-500">
+            <option value="食費">食費</option>
+            <option value="日用品">日用品</option>
+            <option value="交通費">交通費</option>
+            <option value="趣味・娯楽">趣味・娯楽</option>
+            <option value="固定費">固定費</option>
+            <option value="その他">その他</option>
+          </select>
+          <input type="text" id="expense-memo" placeholder="メモ" class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-rose-500">
+          <button type="submit" class="col-span-2 sm:col-span-1 p-2.5 bg-rose-500 hover:bg-rose-600 text-white font-semibold rounded-xl transition">保存</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- カレンダーセクション（分析・習慣以外のモードで共通利用） -->
+    <section id="section-calendar" class="mode-section bg-white rounded-2xl border border-slate-100 shadow-sm p-3 sm:p-5 mb-5">
+      <!-- 年月切り替えコントローラー -->
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center space-x-2">
+          <button onclick="changeMonth(-1)" class="p-2 hover:bg-slate-100 rounded-xl transition"><i data-lucide="chevron-left" class="w-5 h-5 text-slate-600"></i></button>
+          <h2 id="calendar-month-year" class="text-base sm:text-lg font-bold text-slate-800">2026年 10月</h2>
+          <button onclick="changeMonth(1)" class="p-2 hover:bg-slate-100 rounded-xl transition"><i data-lucide="chevron-right" class="w-5 h-5 text-slate-600"></i></button>
+        </div>
+        <button onclick="goToday()" class="text-xs px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold rounded-xl transition">今日</button>
+      </div>
+
+      <!-- カレンダー曜日ヘッダー -->
+      <div class="calendar-grid text-center font-bold text-xs text-slate-400 border-b border-slate-100 pb-2 mb-1">
+        <div class="text-rose-500">日</div>
+        <div>月</div>
+        <div>火</div>
+        <div>水</div>
+        <div>木</div>
+        <div>金</div>
+        <div class="text-indigo-500">土</div>
+      </div>
+
+      <!-- カレンダー本体セルグリッド -->
+      <div id="calendar-cells" class="calendar-grid border-l border-t border-slate-100">
+        <!-- JSで動的生成 -->
+      </div>
+
+      <!-- 家計簿モード時のみ表示する月間合計支出 -->
+      <div id="monthly-expense-summary" class="mt-4 pt-3 border-t border-slate-100 flex justify-between items-center hidden">
+        <span class="text-xs font-semibold text-slate-500">今月の合計支出</span>
+        <span id="monthly-total-amount" class="text-base font-bold text-rose-500">¥0</span>
+      </div>
+    </section>
+
+    <!-- モード: 分析（グラフ＆予算設定） -->
+    <section id="section-analytics" class="mode-section hidden space-y-4 mb-5">
+      <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-bold text-slate-700 flex items-center gap-1.5"><i data-lucide="pie-chart" class="w-4 h-4 text-indigo-500"></i> カテゴリ別支出割合</h3>
+          <div class="flex items-center space-x-2 text-xs">
+            <span class="text-slate-400">予算:</span>
+            <input type="number" id="budget-input" placeholder="未設定" onchange="saveBudget()" class="w-24 p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-right">
+            <span>円</span>
+          </div>
+        </div>
+        <div class="max-w-xs mx-auto">
+          <canvas id="category-chart"></canvas>
         </div>
       </div>
+    </section>
 
-      <div class="grid grid-cols-7 text-center bg-slate-50 border-b border-slate-100 text-xs font-semibold py-2">
-        <span class="text-rose-500">日</span>
-        <span class="text-slate-600">月</span>
-        <span class="text-slate-600">火</span>
-        <span class="text-slate-600">水</span>
-        <span class="text-slate-600">木</span>
-        <span class="text-slate-600">金</span>
-        <span class="text-sky-500">土</span>
+    <!-- モード: 習慣・目標トラッカー -->
+    <section id="section-habit" class="mode-section hidden mb-5">
+      <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+        <h3 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-1.5"><i data-lucide="check-circle-2" class="w-4 h-4 text-amber-500"></i> 習慣・目標トラッカー</h3>
+        
+        <!-- 新規習慣登録 -->
+        <form onsubmit="addHabit(event)" class="flex gap-2 text-xs mb-4">
+          <input type="text" id="habit-name" placeholder="新しい習慣 (例: 読書30分, 筋トレ)..." required class="flex-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-amber-500">
+          <button type="submit" class="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl transition">追加</button>
+        </form>
+
+        <!-- 習慣リスト -->
+        <div id="habit-list" class="space-y-2.5">
+          <!-- JSで描画 -->
+        </div>
       </div>
-
-      <div id="calendar-grid" class="grid grid-cols-7 auto-rows-fr divide-x divide-y divide-slate-100"></div>
-
-      <div id="expense-total-footer" class="hidden bg-emerald-50 border-t border-emerald-100 p-4 flex justify-between items-center">
-        <span class="text-sm font-bold text-emerald-900">今月の合計使用金額</span>
-        <span id="monthly-total-amount" class="text-xl font-black text-emerald-700">¥0</span>
-      </div>
-    </div>
+    </section>
 
   </main>
 
-  <!-- 詳細ダイアログ -->
-  <div id="detail-modal" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4">
-      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-        <h3 id="modal-date-title" class="font-bold text-slate-800">日付詳細</h3>
-        <button onclick="closeModal()" class="p-1 rounded-lg hover:bg-slate-100 text-slate-500"><i data-lucide="x" class="w-5 h-5"></i></button>
+  <!-- 日別詳細モーダル（ポップアップ） -->
+  <div id="detail-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in duration-150">
+      <div class="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+        <h3 id="modal-date-title" class="font-bold text-slate-800 text-sm">2026年10月1日</h3>
+        <button onclick="closeModal()" class="p-1 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
-      <div id="modal-content" class="space-y-3 max-h-[60vh] overflow-y-auto"></div>
+      <div class="p-4 space-y-4 max-h-[70vh] overflow-y-auto text-xs">
+        <div>
+          <h4 class="font-bold text-indigo-600 mb-2 flex items-center gap-1"><i data-lucide="calendar" class="w-3.5 h-3.5"></i> 予定</h4>
+          <div id="modal-events-list" class="space-y-1 text-slate-600 pl-2">なし</div>
+        </div>
+        <div>
+          <h4 class="font-bold text-emerald-600 mb-2 flex items-center gap-1"><i data-lucide="check-square" class="w-3.5 h-3.5"></i> タスク</h4>
+          <div id="modal-tasks-list" class="space-y-1 text-slate-600 pl-2">なし</div>
+        </div>
+        <div>
+          <h4 class="font-bold text-rose-500 mb-2 flex items-center gap-1"><i data-lucide="credit-card" class="w-3.5 h-3.5"></i> 支出明細</h4>
+          <div id="modal-expenses-list" class="space-y-1 text-slate-600 pl-2">なし</div>
+        </div>
+      </div>
     </div>
   </div>
 
+  <!-- JavaScript Implementation -->
   <script>
-    // 初期データ
+    // State Management
     let currentMode = 'all';
     let currentDate = new Date();
+    let tokenClient = null;
+    let accessToken = null;
 
-    let events = [
-      { id: '1', date: '2026-10-01', title: 'チームミーティング', time: '10:00' },
-      { id: '2', date: '2026-10-05', title: '最終提出確認', time: '18:00' }
-    ];
-    let tasks = [
-      { id: '1', date: '2026-10-01', title: '資料の印刷', completed: false }
-    ];
-    let expenses = [
-      { id: '1', date: '2026-10-01', amount: 850, category: '食費', memo: 'ランチ' }
-    ];
-    let habits = [
-      { id: '1', name: '毎日の読書 (15分)', count: 3 }
-    ];
+    // Local Memory Store
+    let eventsData = [];
+    let tasksData = [];
+    let expensesData = [];
+    let habitsData = JSON.parse(localStorage.getItem('habits') || '[]');
+    let userBudget = localStorage.getItem('budget') || '';
 
-    const todayStr = new Date().toISOString().split('T')[0];
-
-    document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('exp-date').value = todayStr;
-      document.getElementById('task-date').value = todayStr;
-      render();
+    // Initialize Page
+    document.addEventListener("DOMContentLoaded", () => {
+      lucide.createIcons();
+      document.getElementById('budget-input').value = userBudget;
+      document.getElementById('today-date-str').textContent = `${currentDate.getFullYear()}/${currentDate.getMonth()+1}/${currentDate.getDate()}`;
+      renderCalendar();
+      renderHabits();
     });
 
-    function switchMode(mode) {
-      currentMode = mode;
-      document.querySelectorAll('.mode-btn').forEach(btn => {
-        btn.className = 'mode-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600';
+    // Google Authentication Setup
+    function initGoogleAuth() {
+      tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID,
+        scope: SCOPES,
+        callback: (tokenResponse) => {
+          if (tokenResponse && tokenResponse.access_token) {
+            accessToken = tokenResponse.access_token;
+            document.getElementById('auth-btn-text').textContent = '接続済み';
+            document.getElementById('auth-btn').classList.replace('bg-indigo-50', 'bg-emerald-50');
+            document.getElementById('auth-btn').classList.replace('text-indigo-600', 'text-emerald-600');
+            fetchAllData();
+          }
+        },
       });
-      const activeBtn = document.getElementById(`btn-${mode}`);
-      if(activeBtn) activeBtn.className = 'mode-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap bg-white text-sky-600 shadow-sm';
-
-      document.getElementById('section-all-summary').classList.toggle('hidden', mode !== 'all');
-      document.getElementById('section-expense-form').classList.toggle('hidden', mode !== 'expense');
-      document.getElementById('section-task-form').classList.toggle('hidden', mode !== 'task');
-      document.getElementById('section-habit').classList.toggle('hidden', mode !== 'habit');
-      document.getElementById('section-analytics').classList.toggle('hidden', mode !== 'analytics');
-      document.getElementById('section-calendar').classList.toggle('hidden', mode === 'habit' || mode === 'analytics');
-      document.getElementById('expense-total-footer').classList.toggle('hidden', mode !== 'expense');
-
-      render();
     }
 
-    function render() {
-      lucide.createIcons();
-      const year = currentDate.getFullYear();
-      const month = currentDate.getMonth();
-
-      document.getElementById('calendar-month-label').innerText = `${year}年 ${month + 1}月`;
-
-      if (currentMode === 'all' || currentMode === 'expense' || currentMode === 'task') {
-        renderCalendar(year, month);
-      }
-      if (currentMode === 'all') renderSummary();
-      if (currentMode === 'habit') renderHabits();
-      if (currentMode === 'analytics') renderAnalytics(year, month);
+    function handleAuthClick() {
+      if (!tokenClient) initGoogleAuth();
+      tokenClient.requestAccessToken({ prompt: 'consent' });
     }
 
-    function renderCalendar(year, month) {
-      const grid = document.getElementById('calendar-grid');
-      grid.innerHTML = '';
-
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
-      const firstDay = new Date(year, month, 1).getDay();
-
-      for (let i = 0; i < firstDay; i++) {
-        grid.innerHTML += `<div class="bg-slate-50/50 min-h-[90px] sm:min-h-[110px]"></div>`;
-      }
-
-      for (let day = 1; day <= daysInMonth; day++) {
-        const mStr = String(month + 1).padStart(2, '0');
-        const dStr = String(day).padStart(2, '0');
-        const dateStr = `${year}-${mStr}-${dStr}`;
-        const isToday = dateStr === todayStr;
-
-        const dayEvents = events.filter(e => e.date === dateStr);
-        const dayTasks = tasks.filter(t => t.date === dateStr);
-        const dayExpenses = expenses.filter(e => e.date === dateStr);
-        const dayTotalExp = dayExpenses.reduce((s, e) => s + Number(e.amount), 0);
-
-        let eventsHtml = '';
-        if (currentMode === 'all') {
-          dayEvents.forEach(e => {
-            eventsHtml += `<div class="bg-sky-100 text-sky-800 text-[10px] sm:text-xs rounded px-1 py-0.5 mb-0.5 truncate-1 font-medium">${e.title}</div>`;
-          });
-        }
-
-        let tasksHtml = '';
-        if (currentMode === 'all' || currentMode === 'task') {
-          dayTasks.forEach(t => {
-            tasksHtml += `<div class="bg-indigo-100 text-indigo-800 text-[10px] sm:text-xs rounded px-1 py-0.5 mb-0.5 truncate-1 font-medium">✓ ${t.title}</div>`;
-          });
-        }
-
-        let expHtml = '';
-        if ((currentMode === 'all' || currentMode === 'expense') && dayTotalExp > 0) {
-          expHtml = `<div class="text-right"><span class="bg-emerald-100 text-emerald-800 text-[10px] sm:text-xs font-bold px-1 py-0.5 rounded inline-block">¥${dayTotalExp.toLocaleString()}</span></div>`;
-        }
-
-        grid.innerHTML += `
-          <div onclick="openModal('${dateStr}')" class="min-h-[90px] sm:min-h-[110px] p-1 sm:p-1.5 cursor-pointer hover:bg-sky-50/30 transition-colors flex flex-col justify-between ${isToday ? 'bg-sky-50/50' : ''}">
-            <div>
-              <div class="flex justify-between items-center mb-1">
-                <span class="text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center ${isToday ? 'bg-sky-600 text-white' : 'text-slate-700'}">${day}</span>
-              </div>
-              ${eventsHtml}
-              ${tasksHtml}
-            </div>
-            ${expHtml}
-          </div>
-        `;
-      }
-
-      // 家計簿合計
-      const monthlyTotal = expenses
-        .filter(e => {
-          const d = new Date(e.date);
-          return d.getFullYear() === year && d.getMonth() === month;
-        })
-        .reduce((s, e) => s + Number(e.amount), 0);
-      document.getElementById('monthly-total-amount').innerText = `¥${monthlyTotal.toLocaleString()}`;
+    // Fetch All Cloud Data
+    async function fetchAllData() {
+      if (!accessToken) return;
+      await Promise.all([fetchCalendarEvents(), fetchGoogleTasks(), fetchSheetExpenses()]);
+      renderCalendar();
+      renderTodaySummary();
+      renderAnalytics();
     }
 
-    function renderSummary() {
-      const todayEvts = events.filter(e => e.date === todayStr);
-      const todayTsks = tasks.filter(t => t.date === todayStr);
-
-      document.getElementById('today-events-list').innerHTML = todayEvts.length > 0 
-        ? todayEvts.map(e => `<div>${e.time || ''} ${e.title}</div>`).join('')
-        : '予定はありません';
-
-      document.getElementById('today-tasks-list').innerHTML = todayTsks.length > 0 
-        ? todayTsks.map(t => `<div>✓ ${t.title}</div>`).join('')
-        : 'タスクはありません';
+    // 1. Calendar API
+    async function fetchCalendarEvents() {
+      const timeMin = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString();
+      const timeMax = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59).toISOString();
+      try {
+        const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true`, {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        const data = await res.json();
+        eventsData = data.items || [];
+      } catch (e) { console.error("Events fetch error:", e); }
     }
 
-    function renderHabits() {
-      const container = document.getElementById('habit-list');
-      container.innerHTML = habits.map(h => `
-        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-          <div>
-            <h3 class="font-semibold text-slate-800 text-sm">${h.name}</h3>
-            <p class="text-xs text-slate-500 mt-0.5">達成: <span class="font-bold text-amber-600 text-base">${h.count}</span> 回</p>
-          </div>
-          <div class="flex items-center gap-1.5">
-            <button onclick="countHabit('${h.id}')" class="bg-amber-100 text-amber-800 text-xs font-bold px-3 py-2 rounded-xl">+1 カウント</button>
-            <button onclick="deleteHabit('${h.id}')" class="text-slate-400 hover:text-rose-500 p-1.5"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-          </div>
-        </div>
-      `).join('');
-      lucide.createIcons();
-    }
-
-    function renderAnalytics(year, month) {
-      const monthlyExp = expenses.filter(e => {
-        const d = new Date(e.date);
-        return d.getFullYear() === year && d.getMonth() === month;
-      });
-      const total = monthlyExp.reduce((s, e) => s + Number(e.amount), 0);
-      document.getElementById('analytics-total').innerText = `¥${total.toLocaleString()}`;
-
-      const cats = ['食費', '日用品', '交通費', '趣味・娯楽', '固定費', 'その他'];
-      const catContainer = document.getElementById('analytics-categories');
-      catContainer.innerHTML = cats.map(cat => {
-        const catTotal = monthlyExp.filter(e => e.category === cat).reduce((s, e) => s + Number(e.amount), 0);
-        const percent = total > 0 ? Math.round((catTotal / total) * 100) : 0;
-        return `
-          <div class="space-y-1">
-            <div class="flex justify-between text-xs font-medium text-slate-600">
-              <span>${cat}</span>
-              <span>¥${catTotal.toLocaleString()} (${percent}%)</span>
-            </div>
-            <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-              <div class="bg-purple-500 h-full rounded-full" style="width: ${percent}%"></div>
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    function changeMonth(diff) {
-      currentDate.setMonth(currentDate.getMonth() + diff);
-      render();
-    }
-
-    function addExpense(e) {
+    async function addCalendarEvent(e) {
       e.preventDefault();
-      expenses.push({
-        id: Date.now().toString(),
-        date: document.getElementById('exp-date').value,
-        amount: Number(document.getElementById('exp-amount').value),
-        category: document.getElementById('exp-cat').value,
-        memo: document.getElementById('exp-memo').value
+      if (!accessToken) return alert("Google連携を行ってください");
+      const title = document.getElementById('event-title').value;
+      const start = new Date(document.getElementById('event-start').value).toISOString();
+      const end = new Date(document.getElementById('event-end').value).toISOString();
+
+      await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ summary: title, start: { dateTime: start }, end: { dateTime: end } })
       });
-      document.getElementById('exp-amount').value = '';
-      document.getElementById('exp-memo').value = '';
-      render();
+      document.getElementById('event-title').value = '';
+      fetchCalendarEvents().then(renderCalendar);
     }
 
-    function addTask(e) {
+    // 2. Google Tasks API
+    async function fetchGoogleTasks() {
+      try {
+        const res = await fetch('https://www.googleapis.com/tasks/v1/users/@me/lists/@default/tasks', {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        const data = await res.json();
+        tasksData = data.items || [];
+      } catch (e) { console.error("Tasks fetch error:", e); }
+    }
+
+    async function addTaskItem(e) {
       e.preventDefault();
-      tasks.push({
-        id: Date.now().toString(),
-        date: document.getElementById('task-date').value,
-        title: document.getElementById('task-title').value,
-        completed: false
+      if (!accessToken) return alert("Google連携を行ってください");
+      const title = document.getElementById('task-title').value;
+      const due = document.getElementById('task-due').value ? new Date(document.getElementById('task-due').value).toISOString() : null;
+
+      await fetch('https://www.googleapis.com/tasks/v1/lists/@default/tasks', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: title, due: due })
       });
       document.getElementById('task-title').value = '';
-      render();
+      fetchGoogleTasks().then(() => { renderCalendar(); renderTodaySummary(); });
     }
 
-    function addHabit(e) {
+    // 3. Google Sheets API (Expenses)
+    async function fetchSheetExpenses() {
+      try {
+        const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/A2:D1000`, {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        const data = await res.json();
+        expensesData = (data.values || []).map(row => ({
+          date: row[0],
+          amount: parseInt(row[1]) || 0,
+          category: row[2] || 'その他',
+          memo: row[3] || ''
+        }));
+      } catch (e) { console.error("Sheets fetch error:", e); }
+    }
+
+    async function addExpenseRecord(e) {
       e.preventDefault();
-      habits.push({ id: Date.now().toString(), name: document.getElementById('habit-name').value, count: 0 });
-      document.getElementById('habit-name').value = '';
-      renderHabits();
+      if (!accessToken) return alert("Google連携を行ってください");
+      const date = document.getElementById('expense-date').value;
+      const amount = document.getElementById('expense-amount').value;
+      const category = document.getElementById('expense-category').value;
+      const memo = document.getElementById('expense-memo').value;
+
+      await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/A1:append?valueInputOption=USER_ENTERED`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ values: [[date, amount, category, memo]] })
+      });
+      document.getElementById('expense-amount').value = '';
+      document.getElementById('expense-memo').value = '';
+      fetchSheetExpenses().then(() => { renderCalendar(); renderAnalytics(); });
     }
 
-    function countHabit(id) {
-      const h = habits.find(x => x.id === id);
-      if (h) h.count++;
-      renderHabits();
+    // Mode Switcher
+    function switchMode(mode) {
+      currentMode = mode;
+      document.querySelectorAll('.mode-tab').forEach(btn => {
+        btn.classList.remove('bg-white', 'text-indigo-600', 'font-bold', 'shadow-sm');
+        btn.classList.add('text-slate-600');
+      });
+      const activeTab = document.getElementById(`tab-${mode}`);
+      activeTab.classList.add('bg-white', 'text-indigo-600', 'font-bold', 'shadow-sm');
+
+      // Sections Visibility
+      document.getElementById('section-all-summary').classList.toggle('hidden', mode !== 'all');
+      document.getElementById('input-section').classList.toggle('hidden', ['all', 'analytics', 'habit'].includes(mode));
+      document.querySelectorAll('.input-form').forEach(f => f.classList.add('hidden'));
+      if (['calendar', 'task', 'finance'].includes(mode)) {
+        document.getElementById(`form-${mode}`).classList.remove('hidden');
+      }
+
+      document.getElementById('section-calendar').classList.toggle('hidden', ['analytics', 'habit'].includes(mode));
+      document.getElementById('monthly-expense-summary').classList.toggle('hidden', mode !== 'finance');
+      document.getElementById('section-analytics').classList.toggle('hidden', mode !== 'analytics');
+      document.getElementById('section-habit').classList.toggle('hidden', mode !== 'habit');
+
+      if (mode === 'analytics') renderAnalytics();
+      renderCalendar();
     }
 
-    function deleteHabit(id) {
-      habits = habits.filter(x => x.id !== id);
-      renderHabits();
+    // Calendar Renderer
+    function renderCalendar() {
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      document.getElementById('calendar-month-year').textContent = `${year}年 ${month + 1}月`;
+
+      const firstDay = new Date(year, month, 1).getDay();
+      const lastDate = new Date(year, month + 1, 0).getDate();
+      const container = document.getElementById('calendar-cells');
+      container.innerHTML = '';
+
+      // Empty lead cells
+      for (let i = 0; i < firstDay; i++) {
+        container.innerHTML += `<div class="calendar-cell bg-slate-50/50 border-r border-b border-slate-100"></div>`;
+      }
+
+      let monthlyExpenseTotal = 0;
+
+      // Day cells
+      for (let day = 1; day <= lastDate; day++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const isToday = new Date().toDateString() === new Date(year, month, day).toDateString();
+
+        // Data Filtering
+        const dayEvents = eventsData.filter(e => (e.start.dateTime || e.start.date).startsWith(dateStr));
+        const dayTasks = tasksData.filter(t => t.due && t.due.startsWith(dateStr));
+        const dayExpenses = expensesData.filter(e => e.date === dateStr);
+        const dayExpenseSum = dayExpenses.reduce((sum, e) => sum + e.amount, 0);
+        monthlyExpenseTotal += dayExpenseSum;
+
+        let itemsHtml = '';
+
+        if (currentMode === 'all' || currentMode === 'calendar') {
+          dayEvents.slice(0, 2).forEach(e => {
+            itemsHtml += `<div class="bg-indigo-50 text-indigo-700 text-[10px] px-1 py-0.5 rounded truncate-1 mb-0.5">${e.summary}</div>`;
+          });
+        }
+        if (currentMode === 'all' || currentMode === 'task') {
+          dayTasks.slice(0, 2).forEach(t => {
+            itemsHtml += `<div class="bg-emerald-50 text-emerald-700 text-[10px] px-1 py-0.5 rounded truncate-1 mb-0.5">✓ ${t.title}</div>`;
+          });
+        }
+        if (dayExpenseSum > 0 && (currentMode === 'all' || currentMode === 'finance')) {
+          itemsHtml += `<div class="bg-rose-50 text-rose-600 font-bold text-[10px] px-1 py-0.5 rounded truncate-1">¥${dayExpenseSum.toLocaleString()}</div>`;
+        }
+
+        container.innerHTML += `
+          <div onclick="openModal('${dateStr}')" class="calendar-cell p-1 border-r border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition relative ${isToday ? 'bg-indigo-50/30' : ''}">
+            <div class="text-[11px] font-bold ${isToday ? 'w-5 h-5 bg-indigo-600 text-white rounded-full flex items-center justify-center mx-auto' : 'text-slate-700'}">${day}</div>
+            <div class="mt-1 space-y-0.5 overflow-hidden">${itemsHtml}</div>
+          </div>
+        `;
+      }
+      document.getElementById('monthly-total-amount').textContent = `¥${monthlyExpenseTotal.toLocaleString()}`;
     }
 
+    // Modal Operations
     function openModal(dateStr) {
-      document.getElementById('modal-date-title').innerText = `${dateStr} の詳細`;
-      const dayEvts = events.filter(e => e.date === dateStr);
-      const dayTsks = tasks.filter(t => t.date === dateStr);
-      const dayExps = expenses.filter(e => e.date === dateStr);
+      document.getElementById('modal-date-title').textContent = dateStr;
+      
+      const dayEvents = eventsData.filter(e => (e.start.dateTime || e.start.date).startsWith(dateStr));
+      const dayTasks = tasksData.filter(t => t.due && t.due.startsWith(dateStr));
+      const dayExpenses = expensesData.filter(e => e.date === dateStr);
 
-      let html = `
-        <div>
-          <h4 class="text-xs font-bold text-sky-600 mb-1.5">予定</h4>
-          ${dayEvts.length > 0 ? dayEvts.map(e => `<div class="p-2 bg-sky-50 rounded-lg text-xs font-medium text-sky-900 mb-1">${e.time \vert{}\vert{} ''}${e.title}</div>`).join('') : '<p class="text-xs text-slate-400">予定なし</p>'}
-        </div>
-        <div>
-          <h4 class="text-xs font-bold text-indigo-600 mb-1.5">タスク</h4>
-          ${dayTsks.length > 0 ? dayTsks.map(t => `<div class="p-2 bg-indigo-50 rounded-lg text-xs font-medium text-indigo-900 mb-1">✓ ${t.title}</div>`).join('') : '<p class="text-xs text-slate-400">タスクなし</p>'}
-        </div>
-        <div>
-          <h4 class="text-xs font-bold text-emerald-600 mb-1.5">支出内訳</h4>
-          ${dayExps.length > 0 ? dayExps.map(e => `<div class="p-2 bg-emerald-50 rounded-lg text-xs font-medium text-emerald-900 mb-1 flex justify-between"><span>[${e.category}]${e.memo || ''}</span><span class="font-bold">¥${Number(e.amount).toLocaleString()}</span></div>`).join('') : '<p class="text-xs text-slate-400">支出なし</p>'}
-        </div>
-      `;
-      document.getElementById('modal-content').innerHTML = html;
+      document.getElementById('modal-events-list').innerHTML = dayEvents.length ? dayEvents.map(e => `<div>・ ${e.summary}</div>`).join('') : '<span class="text-slate-400">なし</span>';
+      document.getElementById('modal-tasks-list').innerHTML = dayTasks.length ? dayTasks.map(t => `<div>・ ${t.title}</div>`).join('') : '<span class="text-slate-400">なし</span>';
+      document.getElementById('modal-expenses-list').innerHTML = dayExpenses.length ? dayExpenses.map(e => `<div>・ ${e.category}: ¥${e.amount.toLocaleString()} (${e.memo || 'メモなし'})</div>`).join('') : '<span class="text-slate-400">なし</span>';
+
       document.getElementById('detail-modal').classList.remove('hidden');
     }
 
     function closeModal() {
       document.getElementById('detail-modal').classList.add('hidden');
+    }
+
+    // Helper Navigation
+    function changeMonth(delta) {
+      currentDate.setMonth(currentDate.getMonth() + delta);
+      renderCalendar();
+    }
+    function goToday() {
+      currentDate = new Date();
+      renderCalendar();
+    }
+
+    // Today Summary (All Mode)
+    function renderTodaySummary() {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const todayEvents = eventsData.filter(e => (e.start.dateTime || e.start.date).startsWith(todayStr));
+      const todayTasks = tasksData.filter(t => t.due && t.due.startsWith(todayStr));
+
+      document.getElementById('today-events-list').innerHTML = todayEvents.length ? todayEvents.map(e => `<div class="p-2 bg-indigo-50/50 rounded-xl">・ ${e.summary}</div>`).join('') : '<p class="text-slate-400 italic">今日の予定はありません</p>';
+      document.getElementById('today-tasks-list').innerHTML = todayTasks.length ? todayTasks.map(t => `<div class="p-2 bg-emerald-50/50 rounded-xl">・ ${t.title}</div>`).join('') : '<p class="text-slate-400 italic">今日のタスクはありません</p>';
+    }
+
+    // Habit Tracker Functions
+    function renderHabits() {
+      const list = document.getElementById('habit-list');
+      list.innerHTML = habitsData.length ? habitsData.map((h, i) => `
+        <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs">
+          <span class="font-medium text-slate-700">${h.name}</span>
+          <div class="flex items-center space-x-2">
+            <button onclick="updateHabitCount(${i}, -1)" class="w-6 h-6 bg-slate-200 rounded-lg text-slate-600 font-bold">-</button>
+            <span class="font-bold text-amber-600 w-6 text-center">${h.count || 0}</span>
+            <button onclick="updateHabitCount(${i}, 1)" class="w-6 h-6 bg-amber-500 rounded-lg text-white font-bold">+</button>
+            <button onclick="deleteHabit(${i})" class="text-slate-400 hover:text-rose-500 ml-2"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+          </div>
+        </div>
+      `).join('') : '<p class="text-slate-400 italic text-xs">習慣が登録されていません</p>';
+      lucide.createIcons();
+    }
+
+    function addHabit(e) {
+      e.preventDefault();
+      const input = document.getElementById('habit-name');
+      habitsData.push({ name: input.value, count: 0 });
+      localStorage.setItem('habits', JSON.stringify(habitsData));
+      input.value = '';
+      renderHabits();
+    }
+
+    function updateHabitCount(index, delta) {
+      habitsData[index].count = Math.max(0, (habitsData[index].count || 0) + delta);
+      localStorage.setItem('habits', JSON.stringify(habitsData));
+      renderHabits();
+    }
+
+    function deleteHabit(index) {
+      habitsData.splice(index, 1);
+      localStorage.setItem('habits', JSON.stringify(habitsData));
+      renderHabits();
+    }
+
+    // Analytics Chart
+    let chartInstance = null;
+    function renderAnalytics() {
+      const ctx = document.getElementById('category-chart').getContext('2d');
+      const categories = {};
+      expensesData.forEach(e => {
+        categories[e.category] = (categories[e.category] || 0) + e.amount;
+      });
+
+      if (chartInstance) chartInstance.destroy();
+      chartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: Object.keys(categories),
+          datasets: [{
+            data: Object.values(categories),
+            backgroundColor: ['#f43f5e', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#64748b']
+          }]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+      });
+    }
+
+    function saveBudget() {
+      const val = document.getElementById('budget-input').value;
+      localStorage.setItem('budget', val);
     }
   </script>
 </body>
