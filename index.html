@@ -33,12 +33,13 @@
       grid-template-columns: repeat(7, minmax(0, 1fr));
       table-layout: fixed;
     }
+    /* 各日の高さを広げて予定が埋まらないように改善 */
     .calendar-cell {
-      min-height: 85px;
+      min-height: 120px;
     }
     @media (max-width: 640px) {
       .calendar-cell {
-        min-height: 65px;
+        min-height: 95px;
       }
     }
     .truncate-1 {
@@ -58,6 +59,19 @@
     .champagne-gold { color: #d4af37; }
     .bg-champagne-gold { background-color: #d4af37; }
     .border-champagne-gold { border-color: #d4af37; }
+
+    /* GoogleカレンダーのカラーIDに対応する背景色 */
+    .gcal-color-1 { background-color: #7986cb !important; color: #fff !important; }
+    .gcal-color-2 { background-color: #33b679 !important; color: #fff !important; }
+    .gcal-color-3 { background-color: #8e24aa !important; color: #fff !important; }
+    .gcal-color-4 { background-color: #e67c73 !important; color: #fff !important; }
+    .gcal-color-5 { background-color: #f6bf26 !important; color: #121212 !important; }
+    .gcal-color-6 { background-color: #f4511e !important; color: #fff !important; }
+    .gcal-color-7 { background-color: #039be5 !important; color: #fff !important; }
+    .gcal-color-8 { background-color: #616161 !important; color: #fff !important; }
+    .gcal-color-9 { background-color: #3f51b5 !important; color: #fff !important; }
+    .gcal-color-10 { background-color: #0b8043 !important; color: #fff !important; }
+    .gcal-color-11 { background-color: #d50000 !important; color: #fff !important; }
   </style>
 </head>
 <body class="antialiased min-h-screen flex flex-col pb-12">
@@ -74,7 +88,7 @@
     <p id="loading-text" class="text-sm font-semibold text-slate-300">処理中...</p>
   </div>
 
-  <!-- ヘッダー（ロゴや名前を完全排除し、ログインボタンのみ右上に配置） -->
+  <!-- ヘッダー（ログインボタンのみ右上に配置） -->
   <header class="bg-[#1a1a1a]/80 backdrop-blur-md sticky top-0 z-30 border-b border-slate-800 px-4 py-3 shadow-sm">
     <div class="max-w-5xl mx-auto flex items-center justify-end">
       <button id="auth-btn" onclick="handleAuthClick()" class="flex items-center space-x-1.5 bg-[#262626] text-[#d4af37] border border-[#d4af37]/30 hover:bg-[#333333] px-4 py-2 rounded-full text-xs font-semibold transition shadow-sm">
@@ -127,7 +141,7 @@
 
     <!-- フォームエリア -->
     <section id="input-section" class="mb-5 hidden">
-      <!-- 予定追加フォーム（メモ対応） -->
+      <!-- 予定追加フォーム（メモ・カラー選択対応） -->
       <div id="form-calendar" class="input-form bg-[#1a1a1a] p-4 rounded-2xl border border-slate-800 shadow-sm hidden">
         <h3 class="text-sm font-bold text-slate-200 mb-3 flex items-center gap-1.5"><i data-lucide="plus-circle" class="w-4 h-4 text-[#d4af37]"></i> 予定の追加（Googleカレンダー）</h3>
         <form onsubmit="addCalendarEvent(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
@@ -135,6 +149,22 @@
           <input type="datetime-local" id="event-start" required class="p-2.5 bg-[#262626] border border-slate-700 text-slate-200 rounded-xl outline-none focus:border-[#d4af37]">
           <input type="datetime-local" id="event-end" required class="p-2.5 bg-[#262626] border border-slate-700 text-slate-200 rounded-xl outline-none focus:border-[#d4af37]">
           <textarea id="event-memo" placeholder="メモ・詳細 (Googleカレンダーに反映されます)" rows="2" class="sm:col-span-2 p-2.5 bg-[#262626] border border-slate-700 text-slate-200 rounded-xl outline-none focus:border-[#d4af37] resize-none"></textarea>
+          <div class="sm:col-span-2 flex items-center gap-2">
+            <label class="text-slate-400">カラー:</label>
+            <select id="event-color" class="p-2 bg-[#262626] border border-slate-700 text-slate-200 rounded-xl outline-none">
+              <option value="1">ラベンダー (デフォルト)</option>
+              <option value="2">セージ</option>
+              <option value="3">グレープ</option>
+              <option value="4">フラミンゴ</option>
+              <option value="5">バナナ</option>
+              <option value="6">タンジェリン</option>
+              <option value="7">ピーコック</option>
+              <option value="8">グラファイト</option>
+              <option value="9">ブルーベリー</option>
+              <option value="10">バジル</option>
+              <option value="11">トマト</option>
+            </select>
+          </div>
           <button type="submit" class="sm:col-span-2 p-2.5 bg-[#d4af37] hover:bg-[#c29f31] text-slate-950 font-bold rounded-xl transition">追加する</button>
         </form>
       </div>
@@ -231,7 +261,7 @@
 
   </main>
 
-  <!-- 日別詳細モーダル（タスクの操作機能付き） -->
+  <!-- 日別詳細モーダル（複数予定の指定フォーマット表示・編集対応） -->
   <div id="detail-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-[#1a1a1a] border border-slate-800 w-full max-w-md rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in duration-150 text-slate-200">
       <div class="p-4 bg-[#222222] border-b border-slate-800 flex justify-between items-center">
@@ -241,7 +271,7 @@
       <div class="p-4 space-y-4 max-h-[70vh] overflow-y-auto text-xs">
         <div>
           <h4 class="font-bold text-[#d4af37] mb-2 flex items-center gap-1"><i data-lucide="calendar" class="w-3.5 h-3.5"></i> 予定</h4>
-          <div id="modal-events-list" class="space-y-1.5 text-slate-300 pl-2">なし</div>
+          <div id="modal-events-list" class="space-y-2 text-slate-300 pl-2">なし</div>
         </div>
         <div>
           <h4 class="font-bold text-emerald-400 mb-2 flex items-center gap-1"><i data-lucide="check-square" class="w-3.5 h-3.5"></i> タスク (完了・削除操作可)</h4>
@@ -251,6 +281,22 @@
           <h4 class="font-bold text-rose-400 mb-2 flex items-center gap-1"><i data-lucide="credit-card" class="w-3.5 h-3.5"></i> 支出明細</h4>
           <div id="modal-expenses-list" class="space-y-1 text-slate-300 pl-2">なし</div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 予定編集モーダル -->
+  <div id="edit-event-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-[#1a1a1a] border border-slate-800 w-full max-w-md rounded-2xl shadow-xl overflow-hidden text-slate-200 p-5 space-y-3">
+      <h3 class="font-bold text-sm text-[#d4af37]">予定の編集</h3>
+      <input type="hidden" id="edit-ev-id">
+      <input type="text" id="edit-ev-title" placeholder="タイトル" class="w-full p-2.5 bg-[#262626] border border-slate-700 rounded-xl text-xs">
+      <input type="datetime-local" id="edit-ev-start" class="w-full p-2.5 bg-[#262626] border border-slate-700 rounded-xl text-xs">
+      <input type="datetime-local" id="edit-ev-end" class="w-full p-2.5 bg-[#262626] border border-slate-700 rounded-xl text-xs">
+      <textarea id="edit-ev-memo" placeholder="メモ" rows="2" class="w-full p-2.5 bg-[#262626] border border-slate-700 rounded-xl text-xs resize-none"></textarea>
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeEditModal()" class="px-3 py-1.5 bg-slate-700 rounded-lg text-xs">キャンセル</button>
+        <button onclick="updateCalendarEvent()" class="px-3 py-1.5 bg-[#d4af37] text-slate-950 font-bold rounded-lg text-xs">更新</button>
       </div>
     </div>
   </div>
@@ -362,6 +408,7 @@
       const startInput = document.getElementById('event-start').value;
       const endInput = document.getElementById('event-end').value;
       const memo = document.getElementById('event-memo').value;
+      const colorId = document.getElementById('event-color').value;
 
       try {
         const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
@@ -370,6 +417,7 @@
           body: JSON.stringify({
             summary: title,
             description: memo,
+            colorId: colorId,
             start: { dateTime: new Date(startInput).toISOString() },
             end: { dateTime: new Date(endInput).toISOString() }
           })
@@ -394,7 +442,6 @@
 
     async function fetchGoogleTasks() {
       try {
-        // 標準タスクリストのIDを取得してからタスク一覧を取得する堅牢な実装
         const listRes = await fetch('https://www.googleapis.com/tasks/v1/users/@me/lists', {
           headers: { Authorization: `Bearer ${accessToken}` }
         });
@@ -420,7 +467,6 @@
       const due = dueInput ? new Date(dueInput + 'T00:00:00Z').toISOString() : null;
 
       try {
-        // デフォルトリストIDの取得
         const listRes = await fetch('https://www.googleapis.com/tasks/v1/users/@me/lists', {
           headers: { Authorization: `Bearer ${accessToken}` }
         });
@@ -473,7 +519,7 @@
       if(!confirm("このタスクを削除しますか？")) return;
       showLoading("タスクを削除中...");
       try {
-        const res = await fetch(`https://www.googleapis.com/tasks/v1/lists/${listId}/tasks/${taskId}`, {
+        await fetch(`https://www.googleapis.com/tasks/v1/lists/${listId}/tasks/${taskId}`, {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${accessToken}` }
         });
@@ -579,7 +625,13 @@
         const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         const isToday = new Date().toDateString() === new Date(year, month, day).toDateString();
 
-        const dayEvents = eventsData.filter(e => (e.start.dateTime || e.start.date || '').startsWith(dateStr));
+        // 複数日にまたがる予定（旅行など）を判定して該当日にすべて反映
+        const dayEvents = eventsData.filter(e => {
+          const start = (e.start.dateTime || e.start.date || '').split('T')[0];
+          const end = (e.end.dateTime || e.end.date || '').split('T')[0];
+          return dateStr >= start && dateStr <= end;
+        });
+
         const dayTasks = tasksData.filter(t => t.due && t.due.startsWith(dateStr));
         const dayExpenses = expensesData.filter(e => e.date === dateStr);
         const dayExpenseSum = dayExpenses.reduce((sum, e) => sum + e.amount, 0);
@@ -587,18 +639,19 @@
 
         let itemsHtml = '';
         if (currentMode === 'all' || currentMode === 'calendar') {
-          dayEvents.slice(0, 2).forEach(e => {
-            itemsHtml += `<div class="bg-[#262626] text-[#d4af37] text-[10px] px-1 py-0.5 rounded truncate-1 mb-0.5">${e.summary}</div>`;
+          dayEvents.slice(0, 3).forEach(e => {
+            const colorClass = e.colorId ? `gcal-color-${e.colorId}` : 'bg-[#262626] text-[#d4af37]';
+            itemsHtml += `<div class="${colorClass} text-[10px] px-1.5 py-0.5 rounded truncate-1 mb-0.5 font-medium">${e.summary}</div>`;
           });
         }
         if (currentMode === 'all' || currentMode === 'task') {
           dayTasks.slice(0, 2).forEach(t => {
             const isDone = t.status === 'completed';
-            itemsHtml += `<div class="bg-[#222825] ${isDone ? 'text-slate-500 line-through' : 'text-emerald-400'} text-[10px] px-1 py-0.5 rounded truncate-1 mb-0.5">✓ ${t.title}</div>`;
+            itemsHtml += `<div class="bg-[#222825] ${isDone ? 'text-slate-500 line-through' : 'text-emerald-400'} text-[10px] px-1.5 py-0.5 rounded truncate-1 mb-0.5">✓ ${t.title}</div>`;
           });
         }
         if (dayExpenseSum > 0 && (currentMode === 'all' || currentMode === 'finance')) {
-          itemsHtml += `<div class="bg-rose-950/50 text-rose-400 font-bold text-[10px] px-1 py-0.5 rounded truncate-1">¥${dayExpenseSum.toLocaleString()}</div>`;
+          itemsHtml += `<div class="bg-rose-950/50 text-rose-400 font-bold text-[10px] px-1.5 py-0.5 rounded truncate-1">¥${dayExpenseSum.toLocaleString()}</div>`;
         }
 
         container.innerHTML += `
@@ -614,16 +667,29 @@
     function openModal(dateStr) {
       document.getElementById('modal-date-title').textContent = dateStr;
       
-      const dayEvents = eventsData.filter(e => (e.start.dateTime || e.start.date || '').startsWith(dateStr));
+      const dayEvents = eventsData.filter(e => {
+        const start = (e.start.dateTime || e.start.date || '').split('T')[0];
+        const end = (e.end.dateTime || e.end.date || '').split('T')[0];
+        return dateStr >= start && dateStr <= end;
+      });
       const dayTasks = tasksData.filter(t => t.due && t.due.startsWith(dateStr));
       const dayExpenses = expensesData.filter(e => e.date === dateStr);
 
-      document.getElementById('modal-events-list').innerHTML = dayEvents.length ? dayEvents.map(e => `
-        <div class="p-2 bg-[#222222] rounded-lg border border-slate-800 mb-1">
-          <div class="font-semibold text-slate-200">・ ${e.summary}</div>
-          ${e.description ? `<div class="text-slate-400 text-[11px] mt-1 whitespace-pre-wrap">📝 ${e.description}</div>` : ''}
-        </div>
-      `).join('') : '<span class="text-slate-500">なし</span>';
+      // ご指定のフォーマット（予定の開始・終了時間 ＋ メモ）
+      document.getElementById('modal-events-list').innerHTML = dayEvents.length ? dayEvents.map(e => {
+        const startTime = e.start.dateTime ? new Date(e.start.dateTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '終日';
+        const endTime = e.end.dateTime ? new Date(e.end.dateTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
+        const timeStr = endTime ? `${startTime}〜${endTime}` : startTime;
+        return `
+          <div class="p-2.5 bg-[#222222] rounded-xl border border-slate-800 mb-2 space-y-1">
+            <div class="font-semibold text-slate-100 flex justify-between items-center">
+              <span>・ ${e.summary} (${timeStr})</span>
+              <button onclick="openEditModal('${e.id}')" class="text-[10px] px-2 py-0.5 bg-slate-700 hover:bg-slate-600 rounded text-slate-200">編集</button>
+            </div>
+            ${e.description ? `<div class="text-slate-400 text-[11px] whitespace-pre-wrap pl-3 border-l-2 border-[#d4af37]/40">${e.description}</div>` : '<div class="text-slate-500 text-[11px] pl-3 italic">メモなし</div>'}
+          </div>
+        `;
+      }).join('') : '<span class="text-slate-500">なし</span>';
 
       document.getElementById('modal-tasks-list').innerHTML = dayTasks.length ? dayTasks.map(t => {
         const isDone = t.status === 'completed';
@@ -631,7 +697,7 @@
           <div class="flex items-center justify-between p-2 bg-[#222222] rounded-lg border border-slate-800 mb-1">
             <span class="${isDone ? 'line-through text-slate-500' : 'text-slate-200'}">✓ ${t.title}</span>
             <div class="flex items-center space-x-2">
-              <button onclick="toggleTaskStatus('${t.id}', '${t.listId}', '${t.status}')" class="px-2 py-1 bg-${isDone ? 'slate-700' : 'emerald-700'} text-white rounded text-[10px]">${isDone ? '未完了に戻す' : '完了'}</button>
+              <button onclick="toggleTaskStatus('${t.id}', '${t.listId}', '${t.status}')" class="px-2 py-1 bg-${isDone ? 'slate-700' : 'emerald-700'} text-white rounded text-[10px]">${isDone ? '戻す' : '完了'}</button>
               <button onclick="deleteTaskItem('${t.id}', '${t.listId}')" class="text-slate-500 hover:text-rose-400 p-1"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
             </div>
           </div>
@@ -648,6 +714,55 @@
       document.getElementById('detail-modal').classList.add('hidden');
     }
 
+    // 予定の編集モーダルを開く
+    function openEditModal(eventId) {
+      const ev = eventsData.find(item => item.id === eventId);
+      if(!ev) return;
+      document.getElementById('edit-ev-id').value = ev.id;
+      document.getElementById('edit-ev-title').value = ev.summary || '';
+      document.getElementById('edit-ev-start').value = ev.start.dateTime ? ev.start.dateTime.slice(0, 16) : '';
+      document.getElementById('edit-ev-end').value = ev.end.dateTime ? ev.end.dateTime.slice(0, 16) : '';
+      document.getElementById('edit-ev-memo').value = ev.description || '';
+      document.getElementById('edit-event-modal').classList.remove('hidden');
+    }
+
+    function closeEditModal() {
+      document.getElementById('edit-event-modal').classList.add('hidden');
+    }
+
+    async function updateCalendarEvent() {
+      const eventId = document.getElementById('edit-ev-id').value;
+      const title = document.getElementById('edit-ev-title').value;
+      const startInput = document.getElementById('edit-ev-start').value;
+      const endInput = document.getElementById('edit-ev-end').value;
+      const memo = document.getElementById('edit-ev-memo').value;
+
+      showLoading("予定を更新中...");
+      try {
+        const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}`, {
+          method: 'PATCH',
+          headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            summary: title,
+            description: memo,
+            start: { dateTime: new Date(startInput).toISOString() },
+            end: { dateTime: new Date(endInput).toISOString() }
+          })
+        });
+        if(!res.ok) throw new Error('更新失敗');
+        closeEditModal();
+        closeModal();
+        await fetchCalendarEvents();
+        renderCalendar();
+        renderTodaySummary();
+        alert("予定を更新しました！");
+      } catch(e) {
+        alert("更新に失敗しました");
+      } finally {
+        hideLoading();
+      }
+    }
+
     function changeMonth(delta) {
       currentDate.setMonth(currentDate.getMonth() + delta);
       if (accessToken) fetchCalendarEvents().then(renderCalendar);
@@ -662,7 +777,11 @@
 
     function renderTodaySummary() {
       const todayStr = new Date().toISOString().split('T')[0];
-      const todayEvents = eventsData.filter(e => (e.start.dateTime || e.start.date || '').startsWith(todayStr));
+      const todayEvents = eventsData.filter(e => {
+        const start = (e.start.dateTime || e.start.date || '').split('T')[0];
+        const end = (e.end.dateTime || e.end.date || '').split('T')[0];
+        return todayStr >= start && todayStr <= end;
+      });
       const todayTasks = tasksData.filter(t => t.due && t.due.startsWith(todayStr));
 
       document.getElementById('today-events-list').innerHTML = todayEvents.length ? todayEvents.map(e => `<div class="p-2 bg-[#222222] rounded-xl border border-slate-800">・ ${e.summary} ${e.description ? `<br><span class="text-slate-400 text-[10px]">📝 ${e.description}</span>` : ''}</div>`).join('') : '<p class="text-slate-500 italic">今日の予定はありません</p>';
