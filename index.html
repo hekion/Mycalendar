@@ -33,7 +33,6 @@
       grid-template-columns: repeat(7, minmax(0, 1fr));
       table-layout: fixed;
     }
-    /* 各日の高さを広げて予定が埋まらないように改善 */
     .calendar-cell {
       min-height: 120px;
     }
@@ -55,7 +54,6 @@
       background: #334155;
       border-radius: 4px;
     }
-    /* シャンパンゴールドのアクセント用カスタム */
     .champagne-gold { color: #d4af37; }
     .bg-champagne-gold { background-color: #d4af37; }
     .border-champagne-gold { border-color: #d4af37; }
@@ -88,7 +86,7 @@
     <p id="loading-text" class="text-sm font-semibold text-slate-300">処理中...</p>
   </div>
 
-  <!-- ヘッダー（ログインボタンのみ右上に配置） -->
+  <!-- ヘッダー -->
   <header class="bg-[#1a1a1a]/80 backdrop-blur-md sticky top-0 z-30 border-b border-slate-800 px-4 py-3 shadow-sm">
     <div class="max-w-5xl mx-auto flex items-center justify-end">
       <button id="auth-btn" onclick="handleAuthClick()" class="flex items-center space-x-1.5 bg-[#262626] text-[#d4af37] border border-[#d4af37]/30 hover:bg-[#333333] px-4 py-2 rounded-full text-xs font-semibold transition shadow-sm">
@@ -141,30 +139,66 @@
 
     <!-- フォームエリア -->
     <section id="input-section" class="mb-5 hidden">
-      <!-- 予定追加フォーム -->
+      <!-- 予定追加フォーム（場所・カラー見本付き） -->
       <div id="form-calendar" class="input-form bg-[#1a1a1a] p-4 rounded-2xl border border-slate-800 shadow-sm hidden">
         <h3 class="text-sm font-bold text-slate-200 mb-3 flex items-center gap-1.5"><i data-lucide="plus-circle" class="w-4 h-4 text-[#d4af37]"></i> 予定の追加（Googleカレンダー）</h3>
         <form onsubmit="addCalendarEvent(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
           <input type="text" id="event-title" placeholder="予定のタイトル" required class="sm:col-span-2 p-2.5 bg-[#262626] border border-slate-700 text-slate-200 rounded-xl outline-none focus:border-[#d4af37]">
           <input type="datetime-local" id="event-start" required class="p-2.5 bg-[#262626] border border-slate-700 text-slate-200 rounded-xl outline-none focus:border-[#d4af37]">
           <input type="datetime-local" id="event-end" required class="p-2.5 bg-[#262626] border border-slate-700 text-slate-200 rounded-xl outline-none focus:border-[#d4af37]">
-          <textarea id="event-memo" placeholder="メモ・詳細 (Googleカレンダーに反映されます)" rows="2" class="sm:col-span-2 p-2.5 bg-[#262626] border border-slate-700 text-slate-200 rounded-xl outline-none focus:border-[#d4af37] resize-none"></textarea>
-          <div class="sm:col-span-2 flex items-center gap-2">
-            <label class="text-slate-400">カラー:</label>
-            <select id="event-color" class="p-2 bg-[#262626] border border-slate-700 text-slate-200 rounded-xl outline-none">
-              <option value="1">ラベンダー (デフォルト)</option>
-              <option value="2">セージ</option>
-              <option value="3">グレープ</option>
-              <option value="4">フラミンゴ</option>
-              <option value="5">バナナ</option>
-              <option value="6">タンジェリン</option>
-              <option value="7">ピーコック</option>
-              <option value="8">グラファイト</option>
-              <option value="9">ブルーベリー</option>
-              <option value="10">バジル</option>
-              <option value="11">トマト</option>
-            </select>
+          <input type="text" id="event-location" placeholder="場所 (例: 東京ドーム)" class="sm:col-span-2 p-2.5 bg-[#262626] border border-slate-700 text-slate-200 rounded-xl outline-none focus:border-[#d4af37]">
+          <textarea id="event-memo" placeholder="メモ・詳細" rows="2" class="sm:col-span-2 p-2.5 bg-[#262626] border border-slate-700 text-slate-200 rounded-xl outline-none focus:border-[#d4af37] resize-none"></textarea>
+          
+          <div class="sm:col-span-2 space-y-1.5">
+            <label class="text-slate-400 block font-semibold">カラー選択（色見本）:</label>
+            <div class="grid grid-cols-4 sm:grid-cols-6 gap-2">
+              <label class="cursor-pointer flex items-center space-x-1.5 p-1.5 rounded-lg bg-[#262626] border border-slate-700 hover:border-[#d4af37]">
+                <input type="radio" name="event-color" value="1" checked class="accent-[#d4af37]">
+                <span class="w-3 h-3 rounded-full inline-block gcal-color-1"></span><span class="text-[10px]">ラベンダー</span>
+              </label>
+              <label class="cursor-pointer flex items-center space-x-1.5 p-1.5 rounded-lg bg-[#262626] border border-slate-700 hover:border-[#d4af37]">
+                <input type="radio" name="event-color" value="2" class="accent-[#d4af37]">
+                <span class="w-3 h-3 rounded-full inline-block gcal-color-2"></span><span class="text-[10px]">セージ</span>
+              </label>
+              <label class="cursor-pointer flex items-center space-x-1.5 p-1.5 rounded-lg bg-[#262626] border border-slate-700 hover:border-[#d4af37]">
+                <input type="radio" name="event-color" value="3" class="accent-[#d4af37]">
+                <span class="w-3 h-3 rounded-full inline-block gcal-color-3"></span><span class="text-[10px]">グレープ</span>
+              </label>
+              <label class="cursor-pointer flex items-center space-x-1.5 p-1.5 rounded-lg bg-[#262626] border border-slate-700 hover:border-[#d4af37]">
+                <input type="radio" name="event-color" value="4" class="accent-[#d4af37]">
+                <span class="w-3 h-3 rounded-full inline-block gcal-color-4"></span><span class="text-[10px]">フラミンゴ</span>
+              </label>
+              <label class="cursor-pointer flex items-center space-x-1.5 p-1.5 rounded-lg bg-[#262626] border border-slate-700 hover:border-[#d4af37]">
+                <input type="radio" name="event-color" value="5" class="accent-[#d4af37]">
+                <span class="w-3 h-3 rounded-full inline-block gcal-color-5"></span><span class="text-[10px]">バナナ</span>
+              </label>
+              <label class="cursor-pointer flex items-center space-x-1.5 p-1.5 rounded-lg bg-[#262626] border border-slate-700 hover:border-[#d4af37]">
+                <input type="radio" name="event-color" value="6" class="accent-[#d4af37]">
+                <span class="w-3 h-3 rounded-full inline-block gcal-color-6"></span><span class="text-[10px]">タンジェリン</span>
+              </label>
+              <label class="cursor-pointer flex items-center space-x-1.5 p-1.5 rounded-lg bg-[#262626] border border-slate-700 hover:border-[#d4af37]">
+                <input type="radio" name="event-color" value="7" class="accent-[#d4af37]">
+                <span class="w-3 h-3 rounded-full inline-block gcal-color-7"></span><span class="text-[10px]">ピーコック</span>
+              </label>
+              <label class="cursor-pointer flex items-center space-x-1.5 p-1.5 rounded-lg bg-[#262626] border border-slate-700 hover:border-[#d4af37]">
+                <input type="radio" name="event-color" value="8" class="accent-[#d4af37]">
+                <span class="w-3 h-3 rounded-full inline-block gcal-color-8"></span><span class="text-[10px]">グラファイト</span>
+              </label>
+              <label class="cursor-pointer flex items-center space-x-1.5 p-1.5 rounded-lg bg-[#262626] border border-slate-700 hover:border-[#d4af37]">
+                <input type="radio" name="event-color" value="9" class="accent-[#d4af37]">
+                <span class="w-3 h-3 rounded-full inline-block gcal-color-9"></span><span class="text-[10px]">ブルーベリー</span>
+              </label>
+              <label class="cursor-pointer flex items-center space-x-1.5 p-1.5 rounded-lg bg-[#262626] border border-slate-700 hover:border-[#d4af37]">
+                <input type="radio" name="event-color" value="10" class="accent-[#d4af37]">
+                <span class="w-3 h-3 rounded-full inline-block gcal-color-10"></span><span class="text-[10px]">バジル</span>
+              </label>
+              <label class="cursor-pointer flex items-center space-x-1.5 p-1.5 rounded-lg bg-[#262626] border border-slate-700 hover:border-[#d4af37]">
+                <input type="radio" name="event-color" value="11" class="accent-[#d4af37]">
+                <span class="w-3 h-3 rounded-full inline-block gcal-color-11"></span><span class="text-[10px]">トマト</span>
+              </label>
+            </div>
           </div>
+
           <button type="submit" class="sm:col-span-2 p-2.5 bg-[#d4af37] hover:bg-[#c29f31] text-slate-950 font-bold rounded-xl transition">追加する</button>
         </form>
       </div>
@@ -179,7 +213,7 @@
         </form>
       </div>
 
-      <!-- 家計簿フォーム（決済方法追加版） -->
+      <!-- 家計簿フォーム -->
       <div id="form-finance" class="input-form bg-[#1a1a1a] p-4 rounded-2xl border border-slate-800 shadow-sm hidden">
         <h3 class="text-sm font-bold text-slate-200 mb-3 flex items-center gap-1.5"><i data-lucide="plus-circle" class="w-4 h-4 text-rose-400"></i> 支出の記録（スプレッドシート）</h3>
         <form onsubmit="addExpenseRecord(event)" class="grid grid-cols-2 sm:grid-cols-6 gap-2.5 text-xs">
@@ -292,18 +326,73 @@
     </div>
   </div>
 
-  <!-- 予定編集モーダル -->
+  <!-- 予定編集・削除モーダル -->
   <div id="edit-event-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-[#1a1a1a] border border-slate-800 w-full max-w-md rounded-2xl shadow-xl overflow-hidden text-slate-200 p-5 space-y-3">
-      <h3 class="font-bold text-sm text-[#d4af37]">予定の編集</h3>
+      <h3 class="font-bold text-sm text-[#d4af37]">予定の編集・削除</h3>
       <input type="hidden" id="edit-ev-id">
       <input type="text" id="edit-ev-title" placeholder="タイトル" class="w-full p-2.5 bg-[#262626] border border-slate-700 rounded-xl text-xs">
       <input type="datetime-local" id="edit-ev-start" class="w-full p-2.5 bg-[#262626] border border-slate-700 rounded-xl text-xs">
       <input type="datetime-local" id="edit-ev-end" class="w-full p-2.5 bg-[#262626] border border-slate-700 rounded-xl text-xs">
+      <input type="text" id="edit-ev-location" placeholder="場所" class="w-full p-2.5 bg-[#262626] border border-slate-700 rounded-xl text-xs">
       <textarea id="edit-ev-memo" placeholder="メモ" rows="2" class="w-full p-2.5 bg-[#262626] border border-slate-700 rounded-xl text-xs resize-none"></textarea>
-      <div class="flex justify-end gap-2 pt-2">
-        <button onclick="closeEditModal()" class="px-3 py-1.5 bg-slate-700 rounded-lg text-xs">キャンセル</button>
-        <button onclick="updateCalendarEvent()" class="px-3 py-1.5 bg-[#d4af37] text-slate-950 font-bold rounded-lg text-xs">更新</button>
+      
+      <div class="space-y-1.5 pt-1">
+        <label class="text-slate-400 block text-xs font-semibold">カラー選択（色見本）:</label>
+        <div class="grid grid-cols-4 gap-1.5">
+          <label class="cursor-pointer flex items-center space-x-1 p-1 rounded bg-[#262626] border border-slate-700 text-[10px]">
+            <input type="radio" name="edit-ev-color" value="1" class="accent-[#d4af37]">
+            <span class="w-2.5 h-2.5 rounded-full inline-block gcal-color-1"></span><span>ラベンダー</span>
+          </label>
+          <label class="cursor-pointer flex items-center space-x-1 p-1 rounded bg-[#262626] border border-slate-700 text-[10px]">
+            <input type="radio" name="edit-ev-color" value="2" class="accent-[#d4af37]">
+            <span class="w-2.5 h-2.5 rounded-full inline-block gcal-color-2"></span><span>セージ</span>
+          </label>
+          <label class="cursor-pointer flex items-center space-x-1 p-1 rounded bg-[#262626] border border-slate-700 text-[10px]">
+            <input type="radio" name="edit-ev-color" value="3" class="accent-[#d4af37]">
+            <span class="w-2.5 h-2.5 rounded-full inline-block gcal-color-3"></span><span>グレープ</span>
+          </label>
+          <label class="cursor-pointer flex items-center space-x-1 p-1 rounded bg-[#262626] border border-slate-700 text-[10px]">
+            <input type="radio" name="edit-ev-color" value="4" class="accent-[#d4af37]">
+            <span class="w-2.5 h-2.5 rounded-full inline-block gcal-color-4"></span><span>フラミンゴ</span>
+          </label>
+          <label class="cursor-pointer flex items-center space-x-1 p-1 rounded bg-[#262626] border border-slate-700 text-[10px]">
+            <input type="radio" name="edit-ev-color" value="5" class="accent-[#d4af37]">
+            <span class="w-2.5 h-2.5 rounded-full inline-block gcal-color-5"></span><span>バナナ</span>
+          </label>
+          <label class="cursor-pointer flex items-center space-x-1 p-1 rounded bg-[#262626] border border-slate-700 text-[10px]">
+            <input type="radio" name="edit-ev-color" value="6" class="accent-[#d4af37]">
+            <span class="w-2.5 h-2.5 rounded-full inline-block gcal-color-6"></span><span>タンジェリン</span>
+          </label>
+          <label class="cursor-pointer flex items-center space-x-1 p-1 rounded bg-[#262626] border border-slate-700 text-[10px]">
+            <input type="radio" name="edit-ev-color" value="7" class="accent-[#d4af37]">
+            <span class="w-2.5 h-2.5 rounded-full inline-block gcal-color-7"></span><span>ピーコック</span>
+          </label>
+          <label class="cursor-pointer flex items-center space-x-1 p-1 rounded bg-[#262626] border border-slate-700 text-[10px]">
+            <input type="radio" name="edit-ev-color" value="8" class="accent-[#d4af37]">
+            <span class="w-2.5 h-2.5 rounded-full inline-block gcal-color-8"></span><span>グラファイト</span>
+          </label>
+          <label class="cursor-pointer flex items-center space-x-1 p-1 rounded bg-[#262626] border border-slate-700 text-[10px]">
+            <input type="radio" name="edit-ev-color" value="9" class="accent-[#d4af37]">
+            <span class="w-2.5 h-2.5 rounded-full inline-block gcal-color-9"></span><span>ブルーベリー</span>
+          </label>
+          <label class="cursor-pointer flex items-center space-x-1 p-1 rounded bg-[#262626] border border-slate-700 text-[10px]">
+            <input type="radio" name="edit-ev-color" value="10" class="accent-[#d4af37]">
+            <span class="w-2.5 h-2.5 rounded-full inline-block gcal-color-10"></span><span>バジル</span>
+          </label>
+          <label class="cursor-pointer flex items-center space-x-1 p-1 rounded bg-[#262626] border border-slate-700 text-[10px]">
+            <input type="radio" name="edit-ev-color" value="11" class="accent-[#d4af37]">
+            <span class="w-2.5 h-2.5 rounded-full inline-block gcal-color-11"></span><span>トマト</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="flex justify-between items-center pt-2">
+        <button onclick="deleteCalendarEvent()" class="px-3 py-1.5 bg-rose-950 text-rose-400 border border-rose-500/30 hover:bg-rose-900 rounded-lg text-xs font-semibold">削除</button>
+        <div class="flex gap-2">
+          <button onclick="closeEditModal()" class="px-3 py-1.5 bg-slate-700 rounded-lg text-xs">キャンセル</button>
+          <button onclick="updateCalendarEvent()" class="px-3 py-1.5 bg-[#d4af37] text-slate-950 font-bold rounded-lg text-xs">更新</button>
+        </div>
       </div>
     </div>
   </div>
@@ -398,11 +487,25 @@
       const timeMin = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString();
       const timeMax = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59).toISOString();
       try {
-        const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true`, {
+        // メインカレンダー ＋ 日本の祝日カレンダーを同時に取得
+        const primaryRes = fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true`, {
           headers: { Authorization: `Bearer ${accessToken}` }
         });
-        const data = await res.json();
-        eventsData = data.items || [];
+        const holidayRes = fetch(`https://www.googleapis.com/calendar/v3/calendars/ja.japanese%23holiday%40group.v.calendar.google.com/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true`, {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+
+        const [pRes, hRes] = await Promise.all([primaryRes, holidayRes]);
+        const pData = await pRes.json();
+        const hData = await hRes.json();
+
+        const holidays = (hData.items || []).map(h => ({
+          ...h,
+          isHoliday: true,
+          colorId: '4' // 祝日はフラミンゴ色などで分かりやすく表示
+        }));
+
+        eventsData = [...(pData.items || []), ...holidays];
       } catch (e) { console.error("Events fetch error:", e); }
     }
 
@@ -414,8 +517,10 @@
       const title = document.getElementById('event-title').value;
       const startInput = document.getElementById('event-start').value;
       const endInput = document.getElementById('event-end').value;
+      const location = document.getElementById('event-location').value;
       const memo = document.getElementById('event-memo').value;
-      const colorId = document.getElementById('event-color').value;
+      const colorRadio = document.querySelector('input[name="event-color"]:checked');
+      const colorId = colorRadio ? colorRadio.value : '1';
 
       try {
         const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
@@ -423,6 +528,7 @@
           headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
             summary: title,
+            location: location,
             description: memo,
             colorId: colorId,
             start: { dateTime: new Date(startInput).toISOString() },
@@ -434,6 +540,7 @@
         document.getElementById('event-title').value = '';
         document.getElementById('event-start').value = '';
         document.getElementById('event-end').value = '';
+        document.getElementById('event-location').value = '';
         document.getElementById('event-memo').value = '';
         
         await fetchCalendarEvents();
@@ -541,7 +648,6 @@
       }
     }
 
-    // スプレッドシート読み込み（A~E列：日付、金額、カテゴリ、決済方法、メモ）
     async function fetchSheetExpenses() {
       try {
         const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/A2:E1000`, {
@@ -558,7 +664,6 @@
       } catch (e) { console.error("Sheets fetch error:", e); }
     }
 
-    // スプレッドシート書き込み（決済方法を追加）
     async function addExpenseRecord(e) {
       e.preventDefault();
       if (!accessToken) return alert("Google連携を行ってください");
@@ -651,7 +756,8 @@
         if (currentMode === 'all' || currentMode === 'calendar') {
           dayEvents.slice(0, 3).forEach(e => {
             const colorClass = e.colorId ? `gcal-color-${e.colorId}` : 'bg-[#262626] text-[#d4af37]';
-            itemsHtml += `<div class="${colorClass} text-[10px] px-1.5 py-0.5 rounded truncate-1 mb-0.5 font-medium">${e.summary}</div>`;
+            const label = e.isHoliday ? `祝: ${e.summary}` : e.summary;
+            itemsHtml += `<div class="${colorClass} text-[10px] px-1.5 py-0.5 rounded truncate-1 mb-0.5 font-medium">${label}</div>`;
           });
         }
         if (currentMode === 'all' || currentMode === 'task') {
@@ -685,17 +791,21 @@
       const dayTasks = tasksData.filter(t => t.due && t.due.startsWith(dateStr));
       const dayExpenses = expensesData.filter(e => e.date === dateStr);
 
+      // ご要望の順番: 予定(時間帯) ➔ 場所 ➔ メモ
       document.getElementById('modal-events-list').innerHTML = dayEvents.length ? dayEvents.map(e => {
         const startTime = e.start.dateTime ? new Date(e.start.dateTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '終日';
         const endTime = e.end.dateTime ? new Date(e.end.dateTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
         const timeStr = endTime ? `${startTime}〜${endTime}` : startTime;
+        const titleText = e.isHoliday ? `🎉 ${e.summary} (祝日)` : e.summary;
+
         return `
           <div class="p-2.5 bg-[#222222] rounded-xl border border-slate-800 mb-2 space-y-1">
             <div class="font-semibold text-slate-100 flex justify-between items-center">
-              <span>・ ${e.summary} (${timeStr})</span>
-              <button onclick="openEditModal('${e.id}')" class="text-[10px] px-2 py-0.5 bg-slate-700 hover:bg-slate-600 rounded text-slate-200">編集</button>
+              <span>・ ${titleText} (${timeStr})</span>
+              ${!e.isHoliday ? `<button onclick="openEditModal('${e.id}')" class="text-[10px] px-2 py-0.5 bg-slate-700 hover:bg-slate-600 rounded text-slate-200">編集・削除</button>` : ''}
             </div>
-            ${e.description ? `<div class="text-slate-400 text-[11px] whitespace-pre-wrap pl-3 border-l-2 border-[#d4af37]/40">${e.description}</div>` : '<div class="text-slate-500 text-[11px] pl-3 italic">メモなし</div>'}
+            ${e.location ? `<div class="text-sky-400 text-[11px] pl-3 flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3"></i> ${e.location}</div>` : ''}
+            ${e.description ? `<div class="text-slate-400 text-[11px] whitespace-pre-wrap pl-3 border-l-2 border-[#d4af37]/40">${e.description}</div>` : ''}
           </div>
         `;
       }).join('') : '<span class="text-slate-500">なし</span>';
@@ -735,7 +845,12 @@
       document.getElementById('edit-ev-title').value = ev.summary || '';
       document.getElementById('edit-ev-start').value = ev.start.dateTime ? ev.start.dateTime.slice(0, 16) : '';
       document.getElementById('edit-ev-end').value = ev.end.dateTime ? ev.end.dateTime.slice(0, 16) : '';
+      document.getElementById('edit-ev-location').value = ev.location || '';
       document.getElementById('edit-ev-memo').value = ev.description || '';
+      
+      const colorRadio = document.querySelector(`input[name="edit-ev-color"][value="${ev.colorId || '1'}"]`);
+      if(colorRadio) colorRadio.checked = true;
+
       document.getElementById('edit-event-modal').classList.remove('hidden');
     }
 
@@ -748,7 +863,10 @@
       const title = document.getElementById('edit-ev-title').value;
       const startInput = document.getElementById('edit-ev-start').value;
       const endInput = document.getElementById('edit-ev-end').value;
+      const location = document.getElementById('edit-ev-location').value;
       const memo = document.getElementById('edit-ev-memo').value;
+      const colorRadio = document.querySelector('input[name="edit-ev-color"]:checked');
+      const colorId = colorRadio ? colorRadio.value : '1';
 
       showLoading("予定を更新中...");
       try {
@@ -757,7 +875,9 @@
           headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
             summary: title,
+            location: location,
             description: memo,
+            colorId: colorId,
             start: { dateTime: new Date(startInput).toISOString() },
             end: { dateTime: new Date(endInput).toISOString() }
           })
@@ -771,6 +891,31 @@
         alert("予定を更新しました！");
       } catch(e) {
         alert("更新に失敗しました");
+      } finally {
+        hideLoading();
+      }
+    }
+
+    // 予定の削除機能
+    async function deleteCalendarEvent() {
+      const eventId = document.getElementById('edit-ev-id').value;
+      if(!confirm("この予定を削除しますか？")) return;
+
+      showLoading("予定を削除中...");
+      try {
+        const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        if(!res.ok) throw new Error('削除失敗');
+        closeEditModal();
+        closeModal();
+        await fetchCalendarEvents();
+        renderCalendar();
+        renderTodaySummary();
+        alert("予定を削除しました！");
+      } catch(e) {
+        alert("削除に失敗しました");
       } finally {
         hideLoading();
       }
@@ -797,7 +942,13 @@
       });
       const todayTasks = tasksData.filter(t => t.due && t.due.startsWith(todayStr));
 
-      document.getElementById('today-events-list').innerHTML = todayEvents.length ? todayEvents.map(e => `<div class="p-2 bg-[#222222] rounded-xl border border-slate-800">・ ${e.summary} ${e.description ? `<br><span class="text-slate-400 text-[10px]">📝 ${e.description}</span>` : ''}</div>`).join('') : '<p class="text-slate-500 italic">今日の予定はありません</p>';
+      document.getElementById('today-events-list').innerHTML = todayEvents.length ? todayEvents.map(e => `
+        <div class="p-2 bg-[#222222] rounded-xl border border-slate-800 space-y-0.5">
+          <div>・ ${e.summary}</div>
+          ${e.location ? `<div class="text-sky-400 text-[10px] pl-3">📍 ${e.location}</div>` : ''}
+          ${e.description ? `<div class="text-slate-400 text-[10px] pl-3">📝 ${e.description}</div>` : ''}
+        </div>
+      `).join('') : '<p class="text-slate-500 italic">今日の予定はありません</p>';
       
       document.getElementById('today-tasks-list').innerHTML = todayTasks.length ? todayTasks.map(t => {
         const isDone = t.status === 'completed';
@@ -876,4 +1027,3 @@
   </script>
 </body>
 </html>
-
