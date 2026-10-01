@@ -376,10 +376,10 @@
     </div>
   </div>
 
-  <!-- 予定編集・削除モーダル -->
+  <!-- 予定編集・削除・複数一括コピーモーダル -->
   <div id="edit-event-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-3 hidden">
     <div class="bg-[#1a1a1a] border border-slate-800 w-full max-w-md rounded-2xl shadow-xl overflow-hidden text-slate-200 p-4 space-y-3">
-      <h3 class="font-bold text-sm text-[#d4af37]">予定の編集・削除</h3>
+      <h3 class="font-bold text-sm text-[#d4af37]">予定の編集・削除・一括コピー</h3>
       <input type="hidden" id="edit-ev-id">
       <input type="text" id="edit-ev-title" placeholder="タイトル" class="w-full p-2.5 bg-[#262626] border border-slate-700 rounded-xl text-xs">
       <input type="datetime-local" id="edit-ev-start" class="w-full p-2.5 bg-[#262626] border border-slate-700 rounded-xl text-xs">
@@ -387,6 +387,16 @@
       <input type="text" id="edit-ev-location" placeholder="場所" class="w-full p-2.5 bg-[#262626] border border-slate-700 rounded-xl text-xs">
       <textarea id="edit-ev-memo" placeholder="メモ" rows="2" class="w-full p-2.5 bg-[#262626] border border-slate-700 rounded-xl text-xs resize-none"></textarea>
       
+      <!-- 複数日程一括コピーエリア -->
+      <div class="p-2.5 bg-[#161616] rounded-xl border border-slate-800 space-y-2">
+        <label class="text-slate-400 block text-[11px] font-semibold">複数の日にまとめてコピー（一括複製）:</label>
+        <div id="copy-dates-container" class="space-y-1.5 max-h-32 overflow-y-auto pr-1">
+          <!-- 動的に日付チェックボックスを生成 -->
+        </div>
+        <button type="button" onclick="addCopyDateRow()" class="w-full py-1 bg-[#262626] hover:bg-[#333333] text-slate-300 rounded-lg text-[11px] border border-slate-700">+ コピー先の日付を追加</button>
+        <button type="button" onclick="duplicateCalendarEventBatch()" class="w-full py-1.5 bg-[#d4af37] text-slate-950 font-bold rounded-lg text-xs">選択した日に一括コピー作成</button>
+      </div>
+
       <div class="space-y-1.5 pt-1">
         <label class="text-slate-400 block text-xs font-semibold">カラー選択（色見本）:</label>
         <div class="grid grid-cols-4 gap-1.5">
@@ -534,28 +544,57 @@
       }
     }
 
+    function getJapaneseHolidays(year) {
+      const holidays = {
+        2026: [
+          ["2026-01-01", "元日"], ["2026-01-12", "成人の日"], ["2026-02-11", "建国記念の日"],
+          ["2026-02-23", "天皇誕生日"], ["2026-03-20", "春分の日"], ["2026-04-29", "昭和の日"],
+          ["2026-05-03", "憲法記念日"], ["2026-05-04", "みどりの日"], ["2026-05-05", "こどもの日"],
+          ["2026-05-06", "振替休日"], ["2026-07-20", "海の日"], ["2026-08-11", "山の日"],
+          ["2026-09-21", "敬老の日"], ["2026-09-22", "国民の休日"], ["2026-09-23", "秋分の日"],
+          ["2026-10-12", "スポーツの日"], ["2026-11-03", "文化の日"], ["2026-11-23", "勤労感謝の日"]
+        ],
+        2027: [
+          ["2027-01-01", "元日"], ["2027-01-11", "成人の日"], ["2027-02-11", "建国記念の日"],
+          ["2027-02-23", "天皇誕生日"], ["2027-03-21", "春分の日"], ["2027-03-22", "振替休日"],
+          ["2027-04-29", "昭和の日"], ["2027-05-03", "憲法記念日"], ["2027-05-04", "みどりの日"],
+          ["2027-05-05", "こどもの日"], ["2027-07-19", "海の日"], ["2027-08-11", "山の日"],
+          ["2027-09-20", "敬老の日"], ["2027-09-23", "秋分の日"], ["2027-10-11", "スポーツの日"],
+          ["2027-11-03", "文化の日"], ["2027-11-23", "勤労感謝の日"]
+        ]
+      };
+
+      const list = holidays[year] || [
+        [`${year}-01-01`, "元日"], [`${year}-02-11`, "建国記念の日"],
+        [`${year}-04-29`, "昭和の日"], [`${year}-05-03`, "憲法記念日"],
+        [`${year}-05-04`, "みどりの日"], [`${year}-05-05`, "こどもの日"],
+        [`${year}-08-11`, "山の日"], [`${year}-11-03`, "文化の日"],
+        [`${year}-11-23`, "勤労感謝の日"]
+      ];
+
+      return list.map(([dateStr, name]) => ({
+        id: `holiday-${dateStr}`,
+        summary: name,
+        isHoliday: true,
+        colorId: '4',
+        start: { date: dateStr },
+        end: { date: dateStr }
+      }));
+    }
+
     async function fetchCalendarEvents() {
-      const timeMin = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString();
-      const timeMax = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59).toISOString();
+      const year = currentDate.getFullYear();
+      const timeMin = new Date(year, currentDate.getMonth(), 1).toISOString();
+      const timeMax = new Date(year, currentDate.getMonth() + 1, 0, 23, 59, 59).toISOString();
       try {
-        const primaryRes = fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true`, {
+        const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true`, {
           headers: { Authorization: `Bearer ${accessToken}` }
         });
-        const holidayRes = fetch(`https://www.googleapis.com/calendar/v3/calendars/ja.japanese%23holiday%40group.v.calendar.google.com/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true`, {
-          headers: { Authorization: `Bearer ${accessToken}` }
-        });
+        const data = await res.json();
+        const primaryEvents = data.items || [];
+        const holidays = getJapaneseHolidays(year);
 
-        const [pRes, hRes] = await Promise.all([primaryRes, holidayRes]);
-        const pData = await pRes.json();
-        const hData = await hRes.json();
-
-        const holidays = (hData.items || []).map(h => ({
-          ...h,
-          isHoliday: true,
-          colorId: '4'
-        }));
-
-        eventsData = [...(pData.items || []), ...holidays];
+        eventsData = [...primaryEvents, ...holidays];
       } catch (e) { console.error("Events fetch error:", e); }
     }
 
@@ -804,6 +843,68 @@
       } catch(err) { alert("支出の記録に失敗しました"); } finally { hideLoading(); }
     }
 
+    // 複数日程への一括コピー機能
+    function addCopyDateRow(defaultDate = '') {
+      const container = document.getElementById('copy-dates-container');
+      const rowId = 'copy-row-' + Date.now() + Math.random();
+      const div = document.createElement('div');
+      div.className = 'flex gap-1.5 items-center';
+      div.id = rowId;
+      div.innerHTML = `
+        <input type="date" value="${defaultDate}" class="copy-date-input flex-1 p-1.5 bg-[#262626] border border-slate-700 rounded-lg text-xs text-slate-200">
+        <button type="button" onclick="document.getElementById('${rowId}').remove()" class="px-2 py-1 bg-rose-950 text-rose-400 rounded text-xs">✕</button>
+      `;
+      container.appendChild(div);
+    }
+
+    async function duplicateCalendarEventBatch() {
+      const eventId = document.getElementById('edit-ev-id').value;
+      const dateInputs = document.querySelectorAll('.copy-date-input');
+      const targetDates = Array.from(dateInputs).map(input => input.value).filter(d => d);
+
+      if (targetDates.length === 0) return alert("コピー先の日付を1つ以上選択・入力してください");
+
+      const ev = eventsData.find(item => item.id === eventId);
+      if (!ev) return;
+
+      showLoading("予定を一括コピー中...");
+      try {
+        let startTimeStr = '10:00:00';
+        let endTimeStr = '11:00:00';
+        if (ev.start.dateTime) {
+          startTimeStr = ev.start.dateTime.split('T')[1];
+          endTimeStr = ev.end.dateTime.split('T')[1];
+        }
+
+        // 選択された全ての日付に対して非同期でGoogleカレンダーに登録
+        const promises = targetDates.map(targetDate => {
+          return fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              summary: ev.summary,
+              location: ev.location || '',
+              description: ev.description || '',
+              colorId: ev.colorId || '1',
+              start: { dateTime: `${targetDate}T${startTimeStr}` },
+              end: { dateTime: `${targetDate}T${endTimeStr}` }
+            })
+          });
+        });
+
+        await Promise.all(promises);
+
+        closeEditModal();
+        closeModal();
+        await fetchAllData();
+        alert(`${targetDates.length}日分の予定に一括コピーしました！`);
+      } catch(e) {
+        alert("一括コピーに失敗しました");
+      } finally {
+        hideLoading();
+      }
+    }
+
     function switchMode(mode) {
       currentMode = mode;
       document.querySelectorAll('.mode-tab').forEach(btn => {
@@ -825,8 +926,6 @@
       document.getElementById('section-habit').classList.toggle('hidden', mode !== 'habit');
 
       if (mode === 'analytics') renderAnalytics();
-      
-      // モード切り替え時にも確実に最新データを強制同期
       if (accessToken) fetchAllData();
       else renderCalendar();
     }
@@ -912,7 +1011,7 @@
           <div class="p-2.5 bg-[#222222] rounded-xl border border-slate-800 mb-2 space-y-1">
             <div class="font-semibold text-slate-100 flex justify-between items-center">
               <span>・ ${titleText} (${timeStr})</span>
-              ${!e.isHoliday ? `<button onclick="openEditModal('${e.id}')" class="text-[10px] px-2 py-0.5 bg-slate-700 hover:bg-slate-600 rounded text-slate-200">編集・削除</button>` : ''}
+              ${!e.isHoliday ? `<button onclick="openEditModal('${e.id}')" class="text-[10px] px-2 py-0.5 bg-slate-700 hover:bg-slate-600 rounded text-slate-200">編集・削除・複製</button>` : ''}
             </div>
             ${e.location ? `<div class="text-sky-400 text-[11px] pl-3 flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3"></i> ${e.location}</div>` : ''}
             ${e.description ? `<div class="text-slate-400 text-[11px] whitespace-pre-wrap pl-3 border-l-2 border-[#d4af37]/40">${e.description}</div>` : ''}
@@ -958,6 +1057,11 @@
       document.getElementById('edit-ev-location').value = ev.location || '';
       document.getElementById('edit-ev-memo').value = ev.description || '';
       
+      // コピー先の日付リストを初期化（最初は1行用意）
+      const container = document.getElementById('copy-dates-container');
+      container.innerHTML = '';
+      addCopyDateRow();
+
       const colorRadio = document.querySelector(`input[name="edit-ev-color"][value="${ev.colorId || '1'}"]`);
       if(colorRadio) colorRadio.checked = true;
 
@@ -1039,7 +1143,9 @@
     }
 
     function renderTodaySummary() {
-      const todayStr = new Date().toISOString().split('T')[0];
+      const now = new Date();
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
       const todayEvents = eventsData.filter(e => {
         const start = (e.start.dateTime || e.start.date || '').split('T')[0];
         const end = (e.end.dateTime || e.end.date || '').split('T')[0];
