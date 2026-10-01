@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>MyLife App</title>
   
-  <!-- PWA Settings for iPhone/Android -->
+  <!-- PWA Settings -->
   <link rel="manifest" href="manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -27,7 +27,6 @@
       background-color: #f8fafc;
       -webkit-tap-highlight-color: transparent;
     }
-    /* カレンダーセル固定・はみ出し防止 */
     .calendar-grid {
       display: grid;
       grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -41,13 +40,11 @@
         min-height: 65px;
       }
     }
-    /* テキスト1行省略 */
     .truncate-1 {
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    /* カスタムスクロールバー */
     ::-webkit-scrollbar {
       width: 4px;
       height: 4px;
@@ -60,12 +57,17 @@
 </head>
 <body class="text-slate-800 antialiased min-h-screen flex flex-col pb-12">
 
-  <!-- 設定（スクリプトから自動設定されます） -->
   <script>
     const CLIENT_ID = '1068662457579-mjlsd7blb627089v06hd4i2td53uu8gn.apps.googleusercontent.com';
     const SPREADSHEET_ID = '1tpi8xp5YMz-Cw3Jtk9xSAgQUg6_Hi9gj1n2dI5_VKqg';
-    const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/spreadsheets';
+    const SCOPES = 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/spreadsheets';
   </script>
+
+  <!-- ローディングオーバーレイ -->
+  <div id="loading-overlay" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex flex-col items-center justify-center text-white hidden">
+    <div class="w-10 h-10 border-4 border-white border-t-transparent rounded-full animate-spin mb-3"></div>
+    <p id="loading-text" class="text-sm font-semibold">処理中...</p>
+  </div>
 
   <!-- ヘッダー -->
   <header class="bg-white/80 backdrop-blur-md sticky top-0 z-30 border-b border-slate-200 px-4 py-3 shadow-sm">
@@ -100,10 +102,9 @@
       <button onclick="switchMode('habit')" id="tab-habit" class="mode-tab flex-1 min-w-[70px] py-2 px-3 rounded-xl transition text-center text-slate-600 hover:text-slate-900">習慣</button>
     </nav>
 
-    <!-- モード 1: すべてモード（今日の予定＆タスクサマリー） -->
+    <!-- モード 1: すべてモード -->
     <section id="section-all-summary" class="mode-section mb-5">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <!-- 今日の予定 -->
         <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
           <div class="flex items-center justify-between mb-3">
             <h2 class="text-sm font-bold text-slate-700 flex items-center gap-1.5">
@@ -116,7 +117,6 @@
           </div>
         </div>
 
-        <!-- 今日のタスク -->
         <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
           <div class="flex items-center justify-between mb-3">
             <h2 class="text-sm font-bold text-slate-700 flex items-center gap-1.5">
@@ -130,9 +130,8 @@
       </div>
     </section>
 
-    <!-- フォームエリア：予定・タスク・家計簿の入力（モード別に表示切り替え） -->
+    <!-- フォームエリア -->
     <section id="input-section" class="mb-5 hidden">
-      <!-- 予定登録フォーム -->
       <div id="form-calendar" class="input-form bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hidden">
         <h3 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-1.5"><i data-lucide="plus-circle" class="w-4 h-4 text-indigo-500"></i> 予定の追加（Googleカレンダー）</h3>
         <form onsubmit="addCalendarEvent(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
@@ -143,7 +142,6 @@
         </form>
       </div>
 
-      <!-- タスク登録フォーム -->
       <div id="form-task" class="input-form bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hidden">
         <h3 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-1.5"><i data-lucide="plus-circle" class="w-4 h-4 text-emerald-500"></i> タスクの追加（Google Tasks）</h3>
         <form onsubmit="addTaskItem(event)" class="flex gap-2 text-xs">
@@ -153,7 +151,6 @@
         </form>
       </div>
 
-      <!-- 家計簿登録フォーム -->
       <div id="form-finance" class="input-form bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hidden">
         <h3 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-1.5"><i data-lucide="plus-circle" class="w-4 h-4 text-rose-500"></i> 支出の記録（スプレッドシート）</h3>
         <form onsubmit="addExpenseRecord(event)" class="grid grid-cols-2 sm:grid-cols-5 gap-2.5 text-xs">
@@ -173,19 +170,17 @@
       </div>
     </section>
 
-    <!-- カレンダーセクション（分析・習慣以外のモードで共通利用） -->
+    <!-- カレンダーセクション -->
     <section id="section-calendar" class="mode-section bg-white rounded-2xl border border-slate-100 shadow-sm p-3 sm:p-5 mb-5">
-      <!-- 年月切り替えコントローラー -->
       <div class="flex items-center justify-between mb-4">
         <div class="flex items-center space-x-2">
           <button onclick="changeMonth(-1)" class="p-2 hover:bg-slate-100 rounded-xl transition"><i data-lucide="chevron-left" class="w-5 h-5 text-slate-600"></i></button>
-          <h2 id="calendar-month-year" class="text-base sm:text-lg font-bold text-slate-800">2026年 10月</h2>
+          <h2 id="calendar-month-year" class="text-base sm:text-lg font-bold text-slate-800"></h2>
           <button onclick="changeMonth(1)" class="p-2 hover:bg-slate-100 rounded-xl transition"><i data-lucide="chevron-right" class="w-5 h-5 text-slate-600"></i></button>
         </div>
         <button onclick="goToday()" class="text-xs px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold rounded-xl transition">今日</button>
       </div>
 
-      <!-- カレンダー曜日ヘッダー -->
       <div class="calendar-grid text-center font-bold text-xs text-slate-400 border-b border-slate-100 pb-2 mb-1">
         <div class="text-rose-500">日</div>
         <div>月</div>
@@ -196,19 +191,15 @@
         <div class="text-indigo-500">土</div>
       </div>
 
-      <!-- カレンダー本体セルグリッド -->
-      <div id="calendar-cells" class="calendar-grid border-l border-t border-slate-100">
-        <!-- JSで動的生成 -->
-      </div>
+      <div id="calendar-cells" class="calendar-grid border-l border-t border-slate-100"></div>
 
-      <!-- 家計簿モード時のみ表示する月間合計支出 -->
       <div id="monthly-expense-summary" class="mt-4 pt-3 border-t border-slate-100 flex justify-between items-center hidden">
         <span class="text-xs font-semibold text-slate-500">今月の合計支出</span>
         <span id="monthly-total-amount" class="text-base font-bold text-rose-500">¥0</span>
       </div>
     </section>
 
-    <!-- モード: 分析（グラフ＆予算設定） -->
+    <!-- 分析モード -->
     <section id="section-analytics" class="mode-section hidden space-y-4 mb-5">
       <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
         <div class="flex items-center justify-between mb-4">
@@ -225,31 +216,27 @@
       </div>
     </section>
 
-    <!-- モード: 習慣・目標トラッカー -->
+    <!-- 習慣トラッカー -->
     <section id="section-habit" class="mode-section hidden mb-5">
       <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
         <h3 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-1.5"><i data-lucide="check-circle-2" class="w-4 h-4 text-amber-500"></i> 習慣・目標トラッカー</h3>
         
-        <!-- 新規習慣登録 -->
         <form onsubmit="addHabit(event)" class="flex gap-2 text-xs mb-4">
           <input type="text" id="habit-name" placeholder="新しい習慣 (例: 読書30分, 筋トレ)..." required class="flex-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-amber-500">
           <button type="submit" class="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl transition">追加</button>
         </form>
 
-        <!-- 習慣リスト -->
-        <div id="habit-list" class="space-y-2.5">
-          <!-- JSで描画 -->
-        </div>
+        <div id="habit-list" class="space-y-2.5"></div>
       </div>
     </section>
 
   </main>
 
-  <!-- 日別詳細モーダル（ポップアップ） -->
+  <!-- 日別詳細モーダル -->
   <div id="detail-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in duration-150">
       <div class="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-        <h3 id="modal-date-title" class="font-bold text-slate-800 text-sm">2026年10月1日</h3>
+        <h3 id="modal-date-title" class="font-bold text-slate-800 text-sm"></h3>
         <button onclick="closeModal()" class="p-1 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
       <div class="p-4 space-y-4 max-h-[70vh] overflow-y-auto text-xs">
@@ -271,29 +258,36 @@
 
   <!-- JavaScript Implementation -->
   <script>
-    // State Management
     let currentMode = 'all';
     let currentDate = new Date();
     let tokenClient = null;
-    let accessToken = null;
+    let accessToken = sessionStorage.getItem('google_access_token') || null;
 
-    // Local Memory Store
     let eventsData = [];
     let tasksData = [];
     let expensesData = [];
     let habitsData = JSON.parse(localStorage.getItem('habits') || '[]');
     let userBudget = localStorage.getItem('budget') || '';
 
-    // Initialize Page
     document.addEventListener("DOMContentLoaded", () => {
       lucide.createIcons();
       document.getElementById('budget-input').value = userBudget;
       document.getElementById('today-date-str').textContent = `${currentDate.getFullYear()}/${currentDate.getMonth()+1}/${currentDate.getDate()}`;
+      
+      // 今日の日付を家計簿入力のデフォルトに
+      const todayIso = new Date().toISOString().split('T')[0];
+      const expDateEl = document.getElementById('expense-date');
+      if(expDateEl) expDateEl.value = todayIso;
+
       renderCalendar();
       renderHabits();
+
+      if (accessToken) {
+        setAuthorizedUI();
+        fetchAllData();
+      }
     });
 
-    // Google Authentication Setup
     function initGoogleAuth() {
       tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
@@ -301,9 +295,8 @@
         callback: (tokenResponse) => {
           if (tokenResponse && tokenResponse.access_token) {
             accessToken = tokenResponse.access_token;
-            document.getElementById('auth-btn-text').textContent = '接続済み';
-            document.getElementById('auth-btn').classList.replace('bg-indigo-50', 'bg-emerald-50');
-            document.getElementById('auth-btn').classList.replace('text-indigo-600', 'text-emerald-600');
+            sessionStorage.setItem('google_access_token', accessToken);
+            setAuthorizedUI();
             fetchAllData();
           }
         },
@@ -312,19 +305,43 @@
 
     function handleAuthClick() {
       if (!tokenClient) initGoogleAuth();
-      tokenClient.requestAccessToken({ prompt: 'consent' });
+      tokenClient.requestAccessToken({ prompt: '' });
     }
 
-    // Fetch All Cloud Data
+    function setAuthorizedUI() {
+      const btnText = document.getElementById('auth-btn-text');
+      const btn = document.getElementById('auth-btn');
+      if(btnText && btn) {
+        btnText.textContent = '接続済み';
+        btn.classList.replace('bg-indigo-50', 'bg-emerald-50');
+        btn.classList.replace('text-indigo-600', 'text-emerald-600');
+      }
+    }
+
+    function showLoading(text) {
+      document.getElementById('loading-text').textContent = text;
+      document.getElementById('loading-overlay').classList.remove('hidden');
+    }
+
+    function hideLoading() {
+      document.getElementById('loading-overlay').classList.add('hidden');
+    }
+
     async function fetchAllData() {
       if (!accessToken) return;
-      await Promise.all([fetchCalendarEvents(), fetchGoogleTasks(), fetchSheetExpenses()]);
-      renderCalendar();
-      renderTodaySummary();
-      renderAnalytics();
+      showLoading("データを同期中...");
+      try {
+        await Promise.all([fetchCalendarEvents(), fetchGoogleTasks(), fetchSheetExpenses()]);
+        renderCalendar();
+        renderTodaySummary();
+        renderAnalytics();
+      } catch(e) {
+        console.error(e);
+      } finally {
+        hideLoading();
+      }
     }
 
-    // 1. Calendar API
     async function fetchCalendarEvents() {
       const timeMin = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString();
       const timeMax = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59).toISOString();
@@ -340,20 +357,39 @@
     async function addCalendarEvent(e) {
       e.preventDefault();
       if (!accessToken) return alert("Google連携を行ってください");
+      
+      showLoading("Googleカレンダーへ登録中...");
       const title = document.getElementById('event-title').value;
-      const start = new Date(document.getElementById('event-start').value).toISOString();
-      const end = new Date(document.getElementById('event-end').value).toISOString();
+      const startInput = document.getElementById('event-start').value;
+      const endInput = document.getElementById('event-end').value;
 
-      await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ summary: title, start: { dateTime: start }, end: { dateTime: end } })
-      });
-      document.getElementById('event-title').value = '';
-      fetchCalendarEvents().then(renderCalendar);
+      try {
+        const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            summary: title,
+            start: { dateTime: new Date(startInput).toISOString() },
+            end: { dateTime: new Date(endInput).toISOString() }
+          })
+        });
+        if (!res.ok) throw new Error('登録に失敗しました');
+
+        document.getElementById('event-title').value = '';
+        document.getElementById('event-start').value = '';
+        document.getElementById('event-end').value = '';
+        
+        await fetchCalendarEvents();
+        renderCalendar();
+        renderTodaySummary();
+        alert("予定の登録が完了しました！");
+      } catch(err) {
+        alert(err.message);
+      } finally {
+        hideLoading();
+      }
     }
 
-    // 2. Google Tasks API
     async function fetchGoogleTasks() {
       try {
         const res = await fetch('https://www.googleapis.com/tasks/v1/users/@me/lists/@default/tasks', {
@@ -367,19 +403,34 @@
     async function addTaskItem(e) {
       e.preventDefault();
       if (!accessToken) return alert("Google連携を行ってください");
-      const title = document.getElementById('task-title').value;
-      const due = document.getElementById('task-due').value ? new Date(document.getElementById('task-due').value).toISOString() : null;
 
-      await fetch('https://www.googleapis.com/tasks/v1/lists/@default/tasks', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: title, due: due })
-      });
-      document.getElementById('task-title').value = '';
-      fetchGoogleTasks().then(() => { renderCalendar(); renderTodaySummary(); });
+      showLoading("Google Tasksへ登録中...");
+      const title = document.getElementById('task-title').value;
+      const dueInput = document.getElementById('task-due').value;
+      const due = dueInput ? new Date(dueInput + 'T00:00:00Z').toISOString() : null;
+
+      try {
+        const res = await fetch('https://www.googleapis.com/tasks/v1/lists/@default/tasks', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: title, due: due })
+        });
+        if (!res.ok) throw new Error('タスク登録に失敗しました');
+
+        document.getElementById('task-title').value = '';
+        document.getElementById('task-due').value = '';
+
+        await fetchGoogleTasks();
+        renderCalendar();
+        renderTodaySummary();
+        alert("タスクの登録が完了しました！");
+      } catch(err) {
+        alert(err.message);
+      } finally {
+        hideLoading();
+      }
     }
 
-    // 3. Google Sheets API (Expenses)
     async function fetchSheetExpenses() {
       try {
         const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/A2:D1000`, {
@@ -398,32 +449,43 @@
     async function addExpenseRecord(e) {
       e.preventDefault();
       if (!accessToken) return alert("Google連携を行ってください");
+
+      showLoading("スプレッドシートへ保存中...");
       const date = document.getElementById('expense-date').value;
       const amount = document.getElementById('expense-amount').value;
       const category = document.getElementById('expense-category').value;
       const memo = document.getElementById('expense-memo').value;
 
-      await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/A1:append?valueInputOption=USER_ENTERED`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ values: [[date, amount, category, memo]] })
-      });
-      document.getElementById('expense-amount').value = '';
-      document.getElementById('expense-memo').value = '';
-      fetchSheetExpenses().then(() => { renderCalendar(); renderAnalytics(); });
+      try {
+        const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/A1:append?valueInputOption=USER_ENTERED`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ values: [[date, amount, category, memo]] })
+        });
+        if (!res.ok) throw new Error('家計簿の保存に失敗しました');
+
+        document.getElementById('expense-amount').value = '';
+        document.getElementById('expense-memo').value = '';
+
+        await fetchSheetExpenses();
+        renderCalendar();
+        renderAnalytics();
+        alert("家計簿の記録が完了しました！");
+      } catch(err) {
+        alert(err.message);
+      } finally {
+        hideLoading();
+      }
     }
 
-    // Mode Switcher
     function switchMode(mode) {
       currentMode = mode;
       document.querySelectorAll('.mode-tab').forEach(btn => {
         btn.classList.remove('bg-white', 'text-indigo-600', 'font-bold', 'shadow-sm');
         btn.classList.add('text-slate-600');
       });
-      const activeTab = document.getElementById(`tab-${mode}`);
-      activeTab.classList.add('bg-white', 'text-indigo-600', 'font-bold', 'shadow-sm');
+      document.getElementById(`tab-${mode}`).classList.add('bg-white', 'text-indigo-600', 'font-bold', 'shadow-sm');
 
-      // Sections Visibility
       document.getElementById('section-all-summary').classList.toggle('hidden', mode !== 'all');
       document.getElementById('input-section').classList.toggle('hidden', ['all', 'analytics', 'habit'].includes(mode));
       document.querySelectorAll('.input-form').forEach(f => f.classList.add('hidden'));
@@ -440,7 +502,6 @@
       renderCalendar();
     }
 
-    // Calendar Renderer
     function renderCalendar() {
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
@@ -451,27 +512,23 @@
       const container = document.getElementById('calendar-cells');
       container.innerHTML = '';
 
-      // Empty lead cells
       for (let i = 0; i < firstDay; i++) {
         container.innerHTML += `<div class="calendar-cell bg-slate-50/50 border-r border-b border-slate-100"></div>`;
       }
 
       let monthlyExpenseTotal = 0;
 
-      // Day cells
       for (let day = 1; day <= lastDate; day++) {
         const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         const isToday = new Date().toDateString() === new Date(year, month, day).toDateString();
 
-        // Data Filtering
-        const dayEvents = eventsData.filter(e => (e.start.dateTime || e.start.date).startsWith(dateStr));
+        const dayEvents = eventsData.filter(e => (e.start.dateTime || e.start.date || '').startsWith(dateStr));
         const dayTasks = tasksData.filter(t => t.due && t.due.startsWith(dateStr));
         const dayExpenses = expensesData.filter(e => e.date === dateStr);
         const dayExpenseSum = dayExpenses.reduce((sum, e) => sum + e.amount, 0);
         monthlyExpenseTotal += dayExpenseSum;
 
         let itemsHtml = '';
-
         if (currentMode === 'all' || currentMode === 'calendar') {
           dayEvents.slice(0, 2).forEach(e => {
             itemsHtml += `<div class="bg-indigo-50 text-indigo-700 text-[10px] px-1 py-0.5 rounded truncate-1 mb-0.5">${e.summary}</div>`;
@@ -496,11 +553,10 @@
       document.getElementById('monthly-total-amount').textContent = `¥${monthlyExpenseTotal.toLocaleString()}`;
     }
 
-    // Modal Operations
     function openModal(dateStr) {
       document.getElementById('modal-date-title').textContent = dateStr;
       
-      const dayEvents = eventsData.filter(e => (e.start.dateTime || e.start.date).startsWith(dateStr));
+      const dayEvents = eventsData.filter(e => (e.start.dateTime || e.start.date || '').startsWith(dateStr));
       const dayTasks = tasksData.filter(t => t.due && t.due.startsWith(dateStr));
       const dayExpenses = expensesData.filter(e => e.date === dateStr);
 
@@ -515,27 +571,27 @@
       document.getElementById('detail-modal').classList.add('hidden');
     }
 
-    // Helper Navigation
     function changeMonth(delta) {
       currentDate.setMonth(currentDate.getMonth() + delta);
-      renderCalendar();
+      if (accessToken) fetchCalendarEvents().then(renderCalendar);
+      else renderCalendar();
     }
+    
     function goToday() {
       currentDate = new Date();
-      renderCalendar();
+      if (accessToken) fetchCalendarEvents().then(renderCalendar);
+      else renderCalendar();
     }
 
-    // Today Summary (All Mode)
     function renderTodaySummary() {
       const todayStr = new Date().toISOString().split('T')[0];
-      const todayEvents = eventsData.filter(e => (e.start.dateTime || e.start.date).startsWith(todayStr));
+      const todayEvents = eventsData.filter(e => (e.start.dateTime || e.start.date || '').startsWith(todayStr));
       const todayTasks = tasksData.filter(t => t.due && t.due.startsWith(todayStr));
 
       document.getElementById('today-events-list').innerHTML = todayEvents.length ? todayEvents.map(e => `<div class="p-2 bg-indigo-50/50 rounded-xl">・ ${e.summary}</div>`).join('') : '<p class="text-slate-400 italic">今日の予定はありません</p>';
       document.getElementById('today-tasks-list').innerHTML = todayTasks.length ? todayTasks.map(t => `<div class="p-2 bg-emerald-50/50 rounded-xl">・ ${t.title}</div>`).join('') : '<p class="text-slate-400 italic">今日のタスクはありません</p>';
     }
 
-    // Habit Tracker Functions
     function renderHabits() {
       const list = document.getElementById('habit-list');
       list.innerHTML = habitsData.length ? habitsData.map((h, i) => `
@@ -573,7 +629,6 @@
       renderHabits();
     }
 
-    // Analytics Chart
     let chartInstance = null;
     function renderAnalytics() {
       const ctx = document.getElementById('category-chart').getContext('2d');
