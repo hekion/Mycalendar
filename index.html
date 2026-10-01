@@ -16,15 +16,17 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <!-- Google API / Identity Services -->
+  <!-- Google API / Identity Services & Maps Places API -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://apis.google.com/js/api.js" async defer></script>
+  <!-- ※場所のサジェストにGoogle Placesを使用する場合、ご自身のGoogle Maps APIキーをlibraries=placesに設定してください -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&libraries=places" async defer></script>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background-color: #121212; /* グラファイト・ダーク基調 */
+      background-color: #121212;
       color: #e2e8f0;
       -webkit-tap-highlight-color: transparent;
     }
@@ -33,12 +35,13 @@
       grid-template-columns: repeat(7, minmax(0, 1fr));
       table-layout: fixed;
     }
+    /* セルの高さを確保しつつスマホの余白を極限まで削る */
     .calendar-cell {
-      min-height: 120px;
+      min-height: 110px;
     }
     @media (max-width: 640px) {
       .calendar-cell {
-        min-height: 95px;
+        min-height: 85px;
       }
     }
     .truncate-1 {
@@ -87,50 +90,50 @@
   </div>
 
   <!-- ヘッダー -->
-  <header class="bg-[#1a1a1a]/80 backdrop-blur-md sticky top-0 z-30 border-b border-slate-800 px-4 py-3 shadow-sm">
+  <header class="bg-[#1a1a1a]/85 backdrop-blur-md sticky top-0 z-30 border-b border-slate-800 px-3 py-2.5 shadow-sm">
     <div class="max-w-5xl mx-auto flex items-center justify-end">
-      <button id="auth-btn" onclick="handleAuthClick()" class="flex items-center space-x-1.5 bg-[#262626] text-[#d4af37] border border-[#d4af37]/30 hover:bg-[#333333] px-4 py-2 rounded-full text-xs font-semibold transition shadow-sm">
-        <i data-lucide="log-in" class="w-4 h-4"></i>
+      <button id="auth-btn" onclick="handleAuthClick()" class="flex items-center space-x-1.5 bg-[#262626] text-[#d4af37] border border-[#d4af37]/30 hover:bg-[#333333] px-3.5 py-1.5 rounded-full text-xs font-semibold transition shadow-sm">
+        <i data-lucide="log-in" class="w-3.5 h-3.5"></i>
         <span id="auth-btn-text">Google 連携</span>
       </button>
     </div>
   </header>
 
-  <!-- メインコンテンツ -->
-  <main class="max-w-5xl mx-auto w-full px-3 sm:px-6 pt-5 flex-1">
+  <!-- メインコンテンツ（余白を極限まで削って幅を拡張） -->
+  <main class="max-w-5xl mx-auto w-full px-1 sm:px-4 pt-3 flex-1">
 
     <!-- モード切り替えタブ -->
-    <nav class="flex space-x-1 bg-[#1a1a1a] border border-slate-800 p-1 rounded-2xl mb-5 overflow-x-auto text-xs sm:text-sm font-medium no-scrollbar">
-      <button onclick="switchMode('all')" id="tab-all" class="mode-tab flex-1 min-w-[70px] py-2 px-3 rounded-xl transition text-center shadow-sm bg-[#262626] text-[#d4af37] font-bold">すべて</button>
-      <button onclick="switchMode('calendar')" id="tab-calendar" class="mode-tab flex-1 min-w-[70px] py-2 px-3 rounded-xl transition text-center text-slate-400 hover:text-slate-200">予定</button>
-      <button onclick="switchMode('task')" id="tab-task" class="mode-tab flex-1 min-w-[70px] py-2 px-3 rounded-xl transition text-center text-slate-400 hover:text-slate-200">タスク</button>
-      <button onclick="switchMode('finance')" id="tab-finance" class="mode-tab flex-1 min-w-[70px] py-2 px-3 rounded-xl transition text-center text-slate-400 hover:text-slate-200">家計簿</button>
-      <button onclick="switchMode('analytics')" id="tab-analytics" class="mode-tab flex-1 min-w-[70px] py-2 px-3 rounded-xl transition text-center text-slate-400 hover:text-slate-200">分析</button>
-      <button onclick="switchMode('habit')" id="tab-habit" class="mode-tab flex-1 min-w-[70px] py-2 px-3 rounded-xl transition text-center text-slate-400 hover:text-slate-200">習慣</button>
+    <nav class="flex space-x-1 bg-[#1a1a1a] border border-slate-800 p-1 rounded-2xl mb-4 overflow-x-auto text-xs sm:text-sm font-medium no-scrollbar">
+      <button onclick="switchMode('all')" id="tab-all" class="mode-tab flex-1 min-w-[65px] py-2 px-2.5 rounded-xl transition text-center shadow-sm bg-[#262626] text-[#d4af37] font-bold">すべて</button>
+      <button onclick="switchMode('calendar')" id="tab-calendar" class="mode-tab flex-1 min-w-[65px] py-2 px-2.5 rounded-xl transition text-center text-slate-400 hover:text-slate-200">予定</button>
+      <button onclick="switchMode('task')" id="tab-task" class="mode-tab flex-1 min-w-[65px] py-2 px-2.5 rounded-xl transition text-center text-slate-400 hover:text-slate-200">タスク</button>
+      <button onclick="switchMode('finance')" id="tab-finance" class="mode-tab flex-1 min-w-[65px] py-2 px-2.5 rounded-xl transition text-center text-slate-400 hover:text-slate-200">家計簿</button>
+      <button onclick="switchMode('analytics')" id="tab-analytics" class="mode-tab flex-1 min-w-[65px] py-2 px-2.5 rounded-xl transition text-center text-slate-400 hover:text-slate-200">分析</button>
+      <button onclick="switchMode('habit')" id="tab-habit" class="mode-tab flex-1 min-w-[65px] py-2 px-2.5 rounded-xl transition text-center text-slate-400 hover:text-slate-200">習慣</button>
     </nav>
 
     <!-- モード 1: すべてモード -->
-    <section id="section-all-summary" class="mode-section mb-5">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="bg-[#1a1a1a] p-4 rounded-2xl border border-slate-800 shadow-sm">
-          <div class="flex items-center justify-between mb-3">
-            <h2 class="text-sm font-bold text-slate-200 flex items-center gap-1.5">
-              <i data-lucide="calendar" class="w-4 h-4 text-[#d4af37]"></i> 今日の予定
+    <section id="section-all-summary" class="mode-section mb-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div class="bg-[#1a1a1a] p-3.5 rounded-2xl border border-slate-800 shadow-sm">
+          <div class="flex items-center justify-between mb-2">
+            <h2 class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+              <i data-lucide="calendar" class="w-3.5 h-3.5 text-[#d4af37]"></i> 今日の予定
             </h2>
-            <span id="today-date-str" class="text-xs text-slate-500"></span>
+            <span id="today-date-str" class="text-[11px] text-slate-500"></span>
           </div>
-          <div id="today-events-list" class="space-y-2 text-xs text-slate-400">
+          <div id="today-events-list" class="space-y-1.5 text-xs text-slate-400">
             <p class="text-slate-500 italic">連携後、今日の予定が表示されます</p>
           </div>
         </div>
 
-        <div class="bg-[#1a1a1a] p-4 rounded-2xl border border-slate-800 shadow-sm">
-          <div class="flex items-center justify-between mb-3">
-            <h2 class="text-sm font-bold text-slate-200 flex items-center gap-1.5">
-              <i data-lucide="check-square" class="w-4 h-4 text-emerald-400"></i> 本日のタスク
+        <div class="bg-[#1a1a1a] p-3.5 rounded-2xl border border-slate-800 shadow-sm">
+          <div class="flex items-center justify-between mb-2">
+            <h2 class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+              <i data-lucide="check-square" class="w-3.5 h-3.5 text-emerald-400"></i> 本日のタスク
             </h2>
           </div>
-          <div id="today-tasks-list" class="space-y-2 text-xs text-slate-400">
+          <div id="today-tasks-list" class="space-y-1.5 text-xs text-slate-400">
             <p class="text-slate-500 italic">連携後、タスクが表示されます</p>
           </div>
         </div>
@@ -138,15 +141,15 @@
     </section>
 
     <!-- フォームエリア -->
-    <section id="input-section" class="mb-5 hidden">
-      <!-- 予定追加フォーム（場所・カラー見本付き） -->
+    <section id="input-section" class="mb-4 hidden">
+      <!-- 予定追加フォーム -->
       <div id="form-calendar" class="input-form bg-[#1a1a1a] p-4 rounded-2xl border border-slate-800 shadow-sm hidden">
         <h3 class="text-sm font-bold text-slate-200 mb-3 flex items-center gap-1.5"><i data-lucide="plus-circle" class="w-4 h-4 text-[#d4af37]"></i> 予定の追加（Googleカレンダー）</h3>
         <form onsubmit="addCalendarEvent(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
           <input type="text" id="event-title" placeholder="予定のタイトル" required class="sm:col-span-2 p-2.5 bg-[#262626] border border-slate-700 text-slate-200 rounded-xl outline-none focus:border-[#d4af37]">
           <input type="datetime-local" id="event-start" required class="p-2.5 bg-[#262626] border border-slate-700 text-slate-200 rounded-xl outline-none focus:border-[#d4af37]">
           <input type="datetime-local" id="event-end" required class="p-2.5 bg-[#262626] border border-slate-700 text-slate-200 rounded-xl outline-none focus:border-[#d4af37]">
-          <input type="text" id="event-location" placeholder="場所 (例: 東京ドーム)" class="sm:col-span-2 p-2.5 bg-[#262626] border border-slate-700 text-slate-200 rounded-xl outline-none focus:border-[#d4af37]">
+          <input type="text" id="event-location" placeholder="場所 (例: 東京ドーム / 候補選択可)" class="sm:col-span-2 p-2.5 bg-[#262626] border border-slate-700 text-slate-200 rounded-xl outline-none focus:border-[#d4af37]">
           <textarea id="event-memo" placeholder="メモ・詳細" rows="2" class="sm:col-span-2 p-2.5 bg-[#262626] border border-slate-700 text-slate-200 rounded-xl outline-none focus:border-[#d4af37] resize-none"></textarea>
           
           <div class="sm:col-span-2 space-y-1.5">
@@ -241,14 +244,14 @@
     </section>
 
     <!-- カレンダーセクション -->
-    <section id="section-calendar" class="mode-section bg-[#1a1a1a] rounded-2xl border border-slate-800 shadow-sm p-3 sm:p-5 mb-5">
-      <div class="flex items-center justify-between mb-4">
-        <div class="flex items-center space-x-2">
-          <button onclick="changeMonth(-1)" class="p-2 hover:bg-[#262626] rounded-xl transition"><i data-lucide="chevron-left" class="w-5 h-5 text-slate-300"></i></button>
-          <h2 id="calendar-month-year" class="text-base sm:text-lg font-bold text-slate-100"></h2>
-          <button onclick="changeMonth(1)" class="p-2 hover:bg-[#262626] rounded-xl transition"><i data-lucide="chevron-right" class="w-5 h-5 text-slate-300"></i></button>
+    <section id="section-calendar" class="mode-section bg-[#1a1a1a] rounded-2xl border border-slate-800 shadow-sm p-1.5 sm:p-4 mb-4">
+      <div class="flex items-center justify-between mb-3 px-1">
+        <div class="flex items-center space-x-1.5">
+          <button onclick="changeMonth(-1)" class="p-1.5 hover:bg-[#262626] rounded-xl transition"><i data-lucide="chevron-left" class="w-5 h-5 text-slate-300"></i></button>
+          <h2 id="calendar-month-year" class="text-sm sm:text-lg font-bold text-slate-100"></h2>
+          <button onclick="changeMonth(1)" class="p-1.5 hover:bg-[#262626] rounded-xl transition"><i data-lucide="chevron-right" class="w-5 h-5 text-slate-300"></i></button>
         </div>
-        <button onclick="goToday()" class="text-xs px-3 py-1.5 bg-[#262626] hover:bg-[#333333] text-slate-300 font-semibold rounded-xl transition border border-slate-700">今日</button>
+        <button onclick="goToday()" class="text-xs px-2.5 py-1 bg-[#262626] hover:bg-[#333333] text-slate-300 font-semibold rounded-xl transition border border-slate-700">今日</button>
       </div>
 
       <div class="calendar-grid text-center font-bold text-xs text-slate-500 border-b border-slate-800 pb-2 mb-1">
@@ -263,16 +266,16 @@
 
       <div id="calendar-cells" class="calendar-grid border-l border-t border-slate-800"></div>
 
-      <div id="monthly-expense-summary" class="mt-4 pt-3 border-t border-slate-800 flex justify-between items-center hidden">
+      <div id="monthly-expense-summary" class="mt-3 pt-2.5 border-t border-slate-800 flex justify-between items-center px-1 hidden">
         <span class="text-xs font-semibold text-slate-400">今月の合計支出</span>
-        <span id="monthly-total-amount" class="text-base font-bold text-rose-400">¥0</span>
+        <span id="monthly-total-amount" class="text-sm font-bold text-rose-400">¥0</span>
       </div>
     </section>
 
     <!-- 分析モード -->
-    <section id="section-analytics" class="mode-section hidden space-y-4 mb-5">
-      <div class="bg-[#1a1a1a] p-5 rounded-2xl border border-slate-800 shadow-sm">
-        <div class="flex items-center justify-between mb-4">
+    <section id="section-analytics" class="mode-section hidden space-y-4 mb-4">
+      <div class="bg-[#1a1a1a] p-4 rounded-2xl border border-slate-800 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
           <h3 class="text-sm font-bold text-slate-200 flex items-center gap-1.5"><i data-lucide="pie-chart" class="w-4 h-4 text-[#d4af37]"></i> カテゴリ別支出割合</h3>
           <div class="flex items-center space-x-2 text-xs">
             <span class="text-slate-400">予算:</span>
@@ -287,48 +290,103 @@
     </section>
 
     <!-- 習慣トラッカー -->
-    <section id="section-habit" class="mode-section hidden mb-5">
-      <div class="bg-[#1a1a1a] p-5 rounded-2xl border border-slate-800 shadow-sm">
+    <section id="section-habit" class="mode-section hidden mb-4">
+      <div class="bg-[#1a1a1a] p-4 rounded-2xl border border-slate-800 shadow-sm">
         <h3 class="text-sm font-bold text-slate-200 mb-3 flex items-center gap-1.5"><i data-lucide="check-circle-2" class="w-4 h-4 text-[#d4af37]"></i> 習慣・目標トラッカー</h3>
         
-        <form onsubmit="addHabit(event)" class="flex gap-2 text-xs mb-4">
+        <form onsubmit="addHabit(event)" class="flex gap-2 text-xs mb-3">
           <input type="text" id="habit-name" placeholder="新しい習慣 (例: 読書30分, 筋トレ)..." required class="flex-1 p-2.5 bg-[#262626] border border-slate-700 text-slate-200 rounded-xl outline-none focus:border-[#d4af37]">
           <button type="submit" class="px-4 py-2.5 bg-[#d4af37] hover:bg-[#c29f31] text-slate-950 font-bold rounded-xl transition">追加</button>
         </form>
 
-        <div id="habit-list" class="space-y-2.5"></div>
+        <div id="habit-list" class="space-y-2"></div>
       </div>
     </section>
 
   </main>
 
-  <!-- 日別詳細モーダル -->
-  <div id="detail-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+  <!-- 日別詳細モーダル（どのモードからでも予定・タスク・家計簿の追加が可能） -->
+  <div id="detail-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-3 hidden">
     <div class="bg-[#1a1a1a] border border-slate-800 w-full max-w-md rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in duration-150 text-slate-200">
-      <div class="p-4 bg-[#222222] border-b border-slate-800 flex justify-between items-center">
-        <h3 id="modal-date-title" class="font-bold text-slate-100 text-sm"></h3>
+      <div class="p-3.5 bg-[#222222] border-b border-slate-800 flex justify-between items-center">
+        <h3 id="modal-date-title" class="font-bold text-slate-100 text-xs sm:text-sm"></h3>
         <button onclick="closeModal()" class="p-1 hover:bg-[#333333] rounded-lg text-slate-400 hover:text-slate-200"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
-      <div class="p-4 space-y-4 max-h-[70vh] overflow-y-auto text-xs">
-        <div>
-          <h4 class="font-bold text-[#d4af37] mb-2 flex items-center gap-1"><i data-lucide="calendar" class="w-3.5 h-3.5"></i> 予定</h4>
-          <div id="modal-events-list" class="space-y-2 text-slate-300 pl-2">なし</div>
+      <div class="p-3.5 space-y-4 max-h-[75vh] overflow-y-auto text-xs">
+        
+        <!-- 当日の既存データ一覧 -->
+        <div class="space-y-3">
+          <div>
+            <h4 class="font-bold text-[#d4af37] mb-1.5 flex items-center gap-1"><i data-lucide="calendar" class="w-3.5 h-3.5"></i> 予定</h4>
+            <div id="modal-events-list" class="space-y-2 text-slate-300 pl-1">なし</div>
+          </div>
+          <div>
+            <h4 class="font-bold text-emerald-400 mb-1.5 flex items-center gap-1"><i data-lucide="check-square" class="w-3.5 h-3.5"></i> タスク</h4>
+            <div id="modal-tasks-list" class="space-y-1.5 text-slate-300 pl-1">なし</div>
+          </div>
+          <div>
+            <h4 class="font-bold text-rose-400 mb-1.5 flex items-center gap-1"><i data-lucide="credit-card" class="w-3.5 h-3.5"></i> 支出明細</h4>
+            <div id="modal-expenses-list" class="space-y-1 text-slate-300 pl-1">なし</div>
+          </div>
         </div>
-        <div>
-          <h4 class="font-bold text-emerald-400 mb-2 flex items-center gap-1"><i data-lucide="check-square" class="w-3.5 h-3.5"></i> タスク</h4>
-          <div id="modal-tasks-list" class="space-y-2 text-slate-300 pl-2">なし</div>
+
+        <hr class="border-slate-800">
+
+        <!-- この日へのクイック追加エリア -->
+        <div class="space-y-3 bg-[#161616] p-3 rounded-xl border border-slate-800/80">
+          <h4 class="font-bold text-slate-200 text-xs flex items-center gap-1"><i data-lucide="plus-circle" class="w-3.5 h-3.5 text-[#d4af37]"></i> この日に項目を追加</h4>
+          
+          <!-- クイック予定追加 -->
+          <form onsubmit="quickAddEvent(event)" class="space-y-2">
+            <div class="text-[10px] text-slate-400 font-semibold">予定を追加</div>
+            <input type="text" id="q-ev-title" placeholder="予定タイトル" required class="w-full p-2 bg-[#262626] border border-slate-700 rounded-lg text-xs">
+            <div class="grid grid-cols-2 gap-2">
+              <input type="time" id="q-ev-start" value="10:00" class="p-2 bg-[#262626] border border-slate-700 rounded-lg text-xs">
+              <input type="time" id="q-ev-end" value="11:00" class="p-2 bg-[#262626] border border-slate-700 rounded-lg text-xs">
+            </div>
+            <input type="text" id="q-ev-location" placeholder="場所" class="w-full p-2 bg-[#262626] border border-slate-700 rounded-lg text-xs">
+            <button type="submit" class="w-full py-1.5 bg-[#d4af37] text-slate-950 font-bold rounded-lg text-xs">予定を登録</button>
+          </form>
+
+          <hr class="border-slate-800">
+
+          <!-- クイックタスク追加 -->
+          <form onsubmit="quickAddTask(event)" class="space-y-2">
+            <div class="text-[10px] text-slate-400 font-semibold">タスクを追加</div>
+            <div class="flex gap-1.5">
+              <input type="text" id="q-task-title" placeholder="タスク名" required class="flex-1 p-2 bg-[#262626] border border-slate-700 rounded-lg text-xs">
+              <button type="submit" class="px-3 py-1.5 bg-emerald-600 text-white font-semibold rounded-lg text-xs">追加</button>
+            </div>
+          </form>
+
+          <hr class="border-slate-800">
+
+          <!-- クイック家計簿追加 -->
+          <form onsubmit="quickAddExpense(event)" class="space-y-2">
+            <div class="text-[10px] text-slate-400 font-semibold">支出を追加</div>
+            <div class="grid grid-cols-2 gap-2">
+              <input type="number" id="q-exp-amount" placeholder="金額 (円)" required class="p-2 bg-[#262626] border border-slate-700 rounded-lg text-xs">
+              <select id="q-exp-category" class="p-2 bg-[#262626] border border-slate-700 rounded-lg text-xs">
+                <option value="食費">食費</option>
+                <option value="日用品">日用品</option>
+                <option value="交通費">交通費</option>
+                <option value="趣味・娯楽">趣味・娯楽</option>
+                <option value="固定費">固定費</option>
+                <option value="その他">その他</option>
+              </select>
+            </div>
+            <button type="submit" class="w-full py-1.5 bg-rose-600 text-white font-semibold rounded-lg text-xs">支出を記録</button>
+          </form>
+
         </div>
-        <div>
-          <h4 class="font-bold text-rose-400 mb-2 flex items-center gap-1"><i data-lucide="credit-card" class="w-3.5 h-3.5"></i> 支出明細</h4>
-          <div id="modal-expenses-list" class="space-y-1 text-slate-300 pl-2">なし</div>
-        </div>
+
       </div>
     </div>
   </div>
 
   <!-- 予定編集・削除モーダル -->
-  <div id="edit-event-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-[#1a1a1a] border border-slate-800 w-full max-w-md rounded-2xl shadow-xl overflow-hidden text-slate-200 p-5 space-y-3">
+  <div id="edit-event-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-3 hidden">
+    <div class="bg-[#1a1a1a] border border-slate-800 w-full max-w-md rounded-2xl shadow-xl overflow-hidden text-slate-200 p-4 space-y-3">
       <h3 class="font-bold text-sm text-[#d4af37]">予定の編集・削除</h3>
       <input type="hidden" id="edit-ev-id">
       <input type="text" id="edit-ev-title" placeholder="タイトル" class="w-full p-2.5 bg-[#262626] border border-slate-700 rounded-xl text-xs">
@@ -409,6 +467,7 @@
     let expensesData = [];
     let habitsData = JSON.parse(localStorage.getItem('habits') || '[]');
     let userBudget = localStorage.getItem('budget') || '';
+    let activeModalDate = '';
 
     document.addEventListener("DOMContentLoaded", () => {
       lucide.createIcons();
@@ -426,6 +485,18 @@
         setAuthorizedUI();
         fetchAllData();
       }
+
+      // Google Places Autocompleteの初期化（場所入力用）
+      setTimeout(() => {
+        if (typeof google !== 'undefined' && google.maps && google.maps.places) {
+          const locInput1 = document.getElementById('event-location');
+          const locInput2 = document.getElementById('q-ev-location');
+          const locInput3 = document.getElementById('edit-ev-location');
+          if(locInput1) new google.maps.places.Autocomplete(locInput1);
+          if(locInput2) new google.maps.places.Autocomplete(locInput2);
+          if(locInput3) new google.maps.places.Autocomplete(locInput3);
+        }
+      }, 1000);
     });
 
     function initGoogleAuth() {
@@ -487,7 +558,6 @@
       const timeMin = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString();
       const timeMax = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59).toISOString();
       try {
-        // メインカレンダー ＋ 日本の祝日カレンダーを同時に取得
         const primaryRes = fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true`, {
           headers: { Authorization: `Bearer ${accessToken}` }
         });
@@ -502,7 +572,7 @@
         const holidays = (hData.items || []).map(h => ({
           ...h,
           isHoliday: true,
-          colorId: '4' // 祝日はフラミンゴ色などで分かりやすく表示
+          colorId: '4'
         }));
 
         eventsData = [...(pData.items || []), ...holidays];
@@ -621,7 +691,7 @@
         await fetchGoogleTasks();
         renderCalendar();
         renderTodaySummary();
-        closeModal();
+        openModal(activeModalDate);
       } catch(e) {
         alert("タスクの更新に失敗しました");
       } finally {
@@ -633,14 +703,14 @@
       if(!confirm("このタスクを削除しますか？")) return;
       showLoading("タスクを削除中...");
       try {
-        const res = await fetch(`https://www.googleapis.com/tasks/v1/lists/${listId}/tasks/${taskId}`, {
+        await fetch(`https://www.googleapis.com/tasks/v1/lists/${listId}/tasks/${taskId}`, {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${accessToken}` }
         });
         await fetchGoogleTasks();
         renderCalendar();
         renderTodaySummary();
-        closeModal();
+        openModal(activeModalDate);
       } catch(e) {
         alert("削除に失敗しました");
       } finally {
@@ -695,6 +765,81 @@
       } finally {
         hideLoading();
       }
+    }
+
+    // --- 日別詳細モーダルからのクイック追加機能 ---
+    async function quickAddEvent(e) {
+      e.preventDefault();
+      if (!accessToken) return alert("Google連携を行ってください");
+      showLoading("予定を追加中...");
+      const title = document.getElementById('q-ev-title').value;
+      const startTime = document.getElementById('q-ev-start').value || '10:00';
+      const endTime = document.getElementById('q-ev-end').value || '11:00';
+      const location = document.getElementById('q-ev-location').value;
+
+      try {
+        await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            summary: title,
+            location: location,
+            start: { dateTime: `${activeModalDate}T${startTime}:00+09:00` },
+            end: { dateTime: `${activeModalDate}T${endTime}:00+09:00` }
+          })
+        });
+        document.getElementById('q-ev-title').value = '';
+        document.getElementById('q-ev-location').value = '';
+        await fetchCalendarEvents();
+        renderCalendar();
+        renderTodaySummary();
+        openModal(activeModalDate);
+      } catch(err) { alert("予定追加に失敗しました"); } finally { hideLoading(); }
+    }
+
+    async function quickAddTask(e) {
+      e.preventDefault();
+      if (!accessToken) return alert("Google連携を行ってください");
+      showLoading("タスクを追加中...");
+      const title = document.getElementById('q-task-title').value;
+
+      try {
+        const listRes = await fetch('https://www.googleapis.com/tasks/v1/users/@me/lists', { headers: { Authorization: `Bearer ${accessToken}` } });
+        const listData = await listRes.json();
+        const defaultListId = listData.items[0].id;
+
+        await fetch(`https://www.googleapis.com/tasks/v1/lists/${defaultListId}/tasks`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: title, due: new Date(activeModalDate + 'T00:00:00Z').toISOString() })
+        });
+        document.getElementById('q-task-title').value = '';
+        await fetchGoogleTasks();
+        renderCalendar();
+        renderTodaySummary();
+        openModal(activeModalDate);
+      } catch(err) { alert("タスク追加に失敗しました"); } finally { hideLoading(); }
+    }
+
+    async function quickAddExpense(e) {
+      e.preventDefault();
+      if (!accessToken) return alert("Google連携を行ってください");
+      showLoading("支出を記録中...");
+      const amount = document.getElementById('q-exp-amount').value;
+      const category = document.getElementById('q-exp-category').value;
+
+      try {
+        await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/A1:append?valueInputOption=USER_ENTERED`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ values: [[activeModalDate, amount, category, '現金', '']] })
+        });
+        document.getElementById('q-exp-amount').value = '';
+        await fetchSheetExpenses();
+        renderCalendar();
+        renderAnalytics();
+        openModal(activeModalDate);
+      } catch(err) { alert("支出の記録に失敗しました"); } finally { hideLoading(); }
     }
 
     function switchMode(mode) {
@@ -757,23 +902,23 @@
           dayEvents.slice(0, 3).forEach(e => {
             const colorClass = e.colorId ? `gcal-color-${e.colorId}` : 'bg-[#262626] text-[#d4af37]';
             const label = e.isHoliday ? `祝: ${e.summary}` : e.summary;
-            itemsHtml += `<div class="${colorClass} text-[10px] px-1.5 py-0.5 rounded truncate-1 mb-0.5 font-medium">${label}</div>`;
+            itemsHtml += `<div class="${colorClass} text-[9px] px-1 py-0.5 rounded truncate-1 mb-0.5 font-medium">${label}</div>`;
           });
         }
         if (currentMode === 'all' || currentMode === 'task') {
           dayTasks.slice(0, 2).forEach(t => {
             const isDone = t.status === 'completed';
-            itemsHtml += `<div class="bg-[#222825] ${isDone ? 'text-slate-500 line-through' : 'text-emerald-400'} text-[10px] px-1.5 py-0.5 rounded truncate-1 mb-0.5">✓ ${t.title}</div>`;
+            itemsHtml += `<div class="bg-[#222825] ${isDone ? 'text-slate-500 line-through' : 'text-emerald-400'} text-[9px] px-1 py-0.5 rounded truncate-1 mb-0.5">✓ ${t.title}</div>`;
           });
         }
         if (dayExpenseSum > 0 && (currentMode === 'all' || currentMode === 'finance')) {
-          itemsHtml += `<div class="bg-rose-950/50 text-rose-400 font-bold text-[10px] px-1.5 py-0.5 rounded truncate-1">¥${dayExpenseSum.toLocaleString()}</div>`;
+          itemsHtml += `<div class="bg-rose-950/50 text-rose-400 font-bold text-[9px] px-1 py-0.5 rounded truncate-1">¥${dayExpenseSum.toLocaleString()}</div>`;
         }
 
         container.innerHTML += `
-          <div onclick="openModal('${dateStr}')" class="calendar-cell p-1 border-r border-b border-slate-800 hover:bg-[#222222] cursor-pointer transition relative ${isToday ? 'bg-[#262626]/40' : ''}">
-            <div class="text-[11px] font-bold ${isToday ? 'w-5 h-5 bg-[#d4af37] text-slate-950 rounded-full flex items-center justify-center mx-auto' : 'text-slate-300'}">${day}</div>
-            <div class="mt-1 space-y-0.5 overflow-hidden">${itemsHtml}</div>
+          <div onclick="openModal('${dateStr}')" class="calendar-cell p-0.5 sm:p-1 border-r border-b border-slate-800 hover:bg-[#222222] cursor-pointer transition relative ${isToday ? 'bg-[#262626]/40' : ''}">
+            <div class="text-[10px] sm:text-[11px] font-bold ${isToday ? 'w-4 h-4 sm:w-5 sm:h-5 bg-[#d4af37] text-slate-950 rounded-full flex items-center justify-center mx-auto' : 'text-slate-300'}">${day}</div>
+            <div class="mt-0.5 space-y-0.5 overflow-hidden">${itemsHtml}</div>
           </div>
         `;
       }
@@ -781,6 +926,7 @@
     }
 
     function openModal(dateStr) {
+      activeModalDate = dateStr;
       document.getElementById('modal-date-title').textContent = dateStr;
       
       const dayEvents = eventsData.filter(e => {
@@ -896,7 +1042,6 @@
       }
     }
 
-    // 予定の削除機能
     async function deleteCalendarEvent() {
       const eventId = document.getElementById('edit-ev-id').value;
       if(!confirm("この予定を削除しますか？")) return;
@@ -933,7 +1078,12 @@
       else renderCalendar();
     }
 
-    function renderTodaySummary() {
+    async function renderTodaySummary() {
+      if (accessToken) {
+        await fetchCalendarEvents();
+        await fetchGoogleTasks();
+      }
+
       const todayStr = new Date().toISOString().split('T')[0];
       const todayEvents = eventsData.filter(e => {
         const start = (e.start.dateTime || e.start.date || '').split('T')[0];
