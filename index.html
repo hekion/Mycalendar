@@ -16,11 +16,9 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <!-- Google API / Identity Services & Maps Places API -->
+  <!-- Google API / Identity Services -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://apis.google.com/js/api.js" async defer></script>
-  <!-- ※場所のサジェストにGoogle Placesを使用する場合、ご自身のGoogle Maps APIキーをlibraries=placesに設定してください -->
-  <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&libraries=places" async defer></script>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -35,7 +33,6 @@
       grid-template-columns: repeat(7, minmax(0, 1fr));
       table-layout: fixed;
     }
-    /* セルの高さを確保しつつスマホの余白を極限まで削る */
     .calendar-cell {
       min-height: 110px;
     }
@@ -99,7 +96,7 @@
     </div>
   </header>
 
-  <!-- メインコンテンツ（余白を極限まで削って幅を拡張） -->
+  <!-- メインコンテンツ -->
   <main class="max-w-5xl mx-auto w-full px-1 sm:px-4 pt-3 flex-1">
 
     <!-- モード切り替えタブ -->
@@ -149,7 +146,7 @@
           <input type="text" id="event-title" placeholder="予定のタイトル" required class="sm:col-span-2 p-2.5 bg-[#262626] border border-slate-700 text-slate-200 rounded-xl outline-none focus:border-[#d4af37]">
           <input type="datetime-local" id="event-start" required class="p-2.5 bg-[#262626] border border-slate-700 text-slate-200 rounded-xl outline-none focus:border-[#d4af37]">
           <input type="datetime-local" id="event-end" required class="p-2.5 bg-[#262626] border border-slate-700 text-slate-200 rounded-xl outline-none focus:border-[#d4af37]">
-          <input type="text" id="event-location" placeholder="場所 (例: 東京ドーム / 候補選択可)" class="sm:col-span-2 p-2.5 bg-[#262626] border border-slate-700 text-slate-200 rounded-xl outline-none focus:border-[#d4af37]">
+          <input type="text" id="event-location" placeholder="場所 (例: 東京ドーム)" class="sm:col-span-2 p-2.5 bg-[#262626] border border-slate-700 text-slate-200 rounded-xl outline-none focus:border-[#d4af37]">
           <textarea id="event-memo" placeholder="メモ・詳細" rows="2" class="sm:col-span-2 p-2.5 bg-[#262626] border border-slate-700 text-slate-200 rounded-xl outline-none focus:border-[#d4af37] resize-none"></textarea>
           
           <div class="sm:col-span-2 space-y-1.5">
@@ -305,7 +302,7 @@
 
   </main>
 
-  <!-- 日別詳細モーダル（どのモードからでも予定・タスク・家計簿の追加が可能） -->
+  <!-- 日別詳細モーダル -->
   <div id="detail-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-3 hidden">
     <div class="bg-[#1a1a1a] border border-slate-800 w-full max-w-md rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in duration-150 text-slate-200">
       <div class="p-3.5 bg-[#222222] border-b border-slate-800 flex justify-between items-center">
@@ -314,7 +311,6 @@
       </div>
       <div class="p-3.5 space-y-4 max-h-[75vh] overflow-y-auto text-xs">
         
-        <!-- 当日の既存データ一覧 -->
         <div class="space-y-3">
           <div>
             <h4 class="font-bold text-[#d4af37] mb-1.5 flex items-center gap-1"><i data-lucide="calendar" class="w-3.5 h-3.5"></i> 予定</h4>
@@ -332,11 +328,9 @@
 
         <hr class="border-slate-800">
 
-        <!-- この日へのクイック追加エリア -->
         <div class="space-y-3 bg-[#161616] p-3 rounded-xl border border-slate-800/80">
           <h4 class="font-bold text-slate-200 text-xs flex items-center gap-1"><i data-lucide="plus-circle" class="w-3.5 h-3.5 text-[#d4af37]"></i> この日に項目を追加</h4>
           
-          <!-- クイック予定追加 -->
           <form onsubmit="quickAddEvent(event)" class="space-y-2">
             <div class="text-[10px] text-slate-400 font-semibold">予定を追加</div>
             <input type="text" id="q-ev-title" placeholder="予定タイトル" required class="w-full p-2 bg-[#262626] border border-slate-700 rounded-lg text-xs">
@@ -350,7 +344,6 @@
 
           <hr class="border-slate-800">
 
-          <!-- クイックタスク追加 -->
           <form onsubmit="quickAddTask(event)" class="space-y-2">
             <div class="text-[10px] text-slate-400 font-semibold">タスクを追加</div>
             <div class="flex gap-1.5">
@@ -361,7 +354,6 @@
 
           <hr class="border-slate-800">
 
-          <!-- クイック家計簿追加 -->
           <form onsubmit="quickAddExpense(event)" class="space-y-2">
             <div class="text-[10px] text-slate-400 font-semibold">支出を追加</div>
             <div class="grid grid-cols-2 gap-2">
@@ -485,18 +477,6 @@
         setAuthorizedUI();
         fetchAllData();
       }
-
-      // Google Places Autocompleteの初期化（場所入力用）
-      setTimeout(() => {
-        if (typeof google !== 'undefined' && google.maps && google.maps.places) {
-          const locInput1 = document.getElementById('event-location');
-          const locInput2 = document.getElementById('q-ev-location');
-          const locInput3 = document.getElementById('edit-ev-location');
-          if(locInput1) new google.maps.places.Autocomplete(locInput1);
-          if(locInput2) new google.maps.places.Autocomplete(locInput2);
-          if(locInput3) new google.maps.places.Autocomplete(locInput3);
-        }
-      }, 1000);
     });
 
     function initGoogleAuth() {
@@ -613,9 +593,7 @@
         document.getElementById('event-location').value = '';
         document.getElementById('event-memo').value = '';
         
-        await fetchCalendarEvents();
-        renderCalendar();
-        renderTodaySummary();
+        await fetchAllData();
         alert("予定の登録が完了しました！");
       } catch(err) {
         alert(err.message);
@@ -667,9 +645,7 @@
         document.getElementById('task-title').value = '';
         document.getElementById('task-due').value = '';
 
-        await fetchGoogleTasks();
-        renderCalendar();
-        renderTodaySummary();
+        await fetchAllData();
         alert("タスクの登録が完了しました！");
       } catch(err) {
         alert(err.message);
@@ -682,16 +658,13 @@
       const newStatus = currentStatus === 'completed' ? 'needsAction' : 'completed';
       showLoading("タスクを更新中...");
       try {
-        const res = await fetch(`https://www.googleapis.com/tasks/v1/lists/${listId}/tasks/${taskId}`, {
+        await fetch(`https://www.googleapis.com/tasks/v1/lists/${listId}/tasks/${taskId}`, {
           method: 'PATCH',
           headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: newStatus })
         });
-        if (!res.ok) throw new Error('更新失敗');
-        await fetchGoogleTasks();
-        renderCalendar();
-        renderTodaySummary();
-        openModal(activeModalDate);
+        await fetchAllData();
+        if (activeModalDate) openModal(activeModalDate);
       } catch(e) {
         alert("タスクの更新に失敗しました");
       } finally {
@@ -707,10 +680,8 @@
           method: 'DELETE',
           headers: { Authorization: `Bearer ${accessToken}` }
         });
-        await fetchGoogleTasks();
-        renderCalendar();
-        renderTodaySummary();
-        openModal(activeModalDate);
+        await fetchAllData();
+        if (activeModalDate) openModal(activeModalDate);
       } catch(e) {
         alert("削除に失敗しました");
       } finally {
@@ -756,9 +727,7 @@
         document.getElementById('expense-amount').value = '';
         document.getElementById('expense-memo').value = '';
 
-        await fetchSheetExpenses();
-        renderCalendar();
-        renderAnalytics();
+        await fetchAllData();
         alert("家計簿の記録が完了しました！");
       } catch(err) {
         alert(err.message);
@@ -767,7 +736,6 @@
       }
     }
 
-    // --- 日別詳細モーダルからのクイック追加機能 ---
     async function quickAddEvent(e) {
       e.preventDefault();
       if (!accessToken) return alert("Google連携を行ってください");
@@ -790,9 +758,7 @@
         });
         document.getElementById('q-ev-title').value = '';
         document.getElementById('q-ev-location').value = '';
-        await fetchCalendarEvents();
-        renderCalendar();
-        renderTodaySummary();
+        await fetchAllData();
         openModal(activeModalDate);
       } catch(err) { alert("予定追加に失敗しました"); } finally { hideLoading(); }
     }
@@ -814,9 +780,7 @@
           body: JSON.stringify({ title: title, due: new Date(activeModalDate + 'T00:00:00Z').toISOString() })
         });
         document.getElementById('q-task-title').value = '';
-        await fetchGoogleTasks();
-        renderCalendar();
-        renderTodaySummary();
+        await fetchAllData();
         openModal(activeModalDate);
       } catch(err) { alert("タスク追加に失敗しました"); } finally { hideLoading(); }
     }
@@ -835,9 +799,7 @@
           body: JSON.stringify({ values: [[activeModalDate, amount, category, '現金', '']] })
         });
         document.getElementById('q-exp-amount').value = '';
-        await fetchSheetExpenses();
-        renderCalendar();
-        renderAnalytics();
+        await fetchAllData();
         openModal(activeModalDate);
       } catch(err) { alert("支出の記録に失敗しました"); } finally { hideLoading(); }
     }
@@ -863,7 +825,10 @@
       document.getElementById('section-habit').classList.toggle('hidden', mode !== 'habit');
 
       if (mode === 'analytics') renderAnalytics();
-      renderCalendar();
+      
+      // モード切り替え時にも確実に最新データを強制同期
+      if (accessToken) fetchAllData();
+      else renderCalendar();
     }
 
     function renderCalendar() {
@@ -937,7 +902,6 @@
       const dayTasks = tasksData.filter(t => t.due && t.due.startsWith(dateStr));
       const dayExpenses = expensesData.filter(e => e.date === dateStr);
 
-      // ご要望の順番: 予定(時間帯) ➔ 場所 ➔ メモ
       document.getElementById('modal-events-list').innerHTML = dayEvents.length ? dayEvents.map(e => {
         const startTime = e.start.dateTime ? new Date(e.start.dateTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '終日';
         const endTime = e.end.dateTime ? new Date(e.end.dateTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
@@ -1031,9 +995,7 @@
         if(!res.ok) throw new Error('更新失敗');
         closeEditModal();
         closeModal();
-        await fetchCalendarEvents();
-        renderCalendar();
-        renderTodaySummary();
+        await fetchAllData();
         alert("予定を更新しました！");
       } catch(e) {
         alert("更新に失敗しました");
@@ -1055,9 +1017,7 @@
         if(!res.ok) throw new Error('削除失敗');
         closeEditModal();
         closeModal();
-        await fetchCalendarEvents();
-        renderCalendar();
-        renderTodaySummary();
+        await fetchAllData();
         alert("予定を削除しました！");
       } catch(e) {
         alert("削除に失敗しました");
@@ -1078,12 +1038,7 @@
       else renderCalendar();
     }
 
-    async function renderTodaySummary() {
-      if (accessToken) {
-        await fetchCalendarEvents();
-        await fetchGoogleTasks();
-      }
-
+    function renderTodaySummary() {
       const todayStr = new Date().toISOString().split('T')[0];
       const todayEvents = eventsData.filter(e => {
         const start = (e.start.dateTime || e.start.date || '').split('T')[0];
