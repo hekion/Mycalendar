@@ -1,3 +1,5 @@
+「決済方法」の入力欄・スプレッドシート連携（D列に決済方法、E列にメモ）を完全反映させ、これまでのすべての機能（カレンダー・タスク・家計簿・色・複数日またぎ・編集・シャンパンゴールド＆グラファイトのデザイン）を網羅した最新版の全コードです。
+そのままコピーして、お使いの index.html に上書き保存してください。
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -141,7 +143,7 @@
 
     <!-- フォームエリア -->
     <section id="input-section" class="mb-5 hidden">
-      <!-- 予定追加フォーム（メモ・カラー選択対応） -->
+      <!-- 予定追加フォーム -->
       <div id="form-calendar" class="input-form bg-[#1a1a1a] p-4 rounded-2xl border border-slate-800 shadow-sm hidden">
         <h3 class="text-sm font-bold text-slate-200 mb-3 flex items-center gap-1.5"><i data-lucide="plus-circle" class="w-4 h-4 text-[#d4af37]"></i> 予定の追加（Googleカレンダー）</h3>
         <form onsubmit="addCalendarEvent(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
@@ -179,10 +181,10 @@
         </form>
       </div>
 
-      <!-- 家計簿フォーム -->
+      <!-- 家計簿フォーム（決済方法追加版） -->
       <div id="form-finance" class="input-form bg-[#1a1a1a] p-4 rounded-2xl border border-slate-800 shadow-sm hidden">
         <h3 class="text-sm font-bold text-slate-200 mb-3 flex items-center gap-1.5"><i data-lucide="plus-circle" class="w-4 h-4 text-rose-400"></i> 支出の記録（スプレッドシート）</h3>
-        <form onsubmit="addExpenseRecord(event)" class="grid grid-cols-2 sm:grid-cols-5 gap-2.5 text-xs">
+        <form onsubmit="addExpenseRecord(event)" class="grid grid-cols-2 sm:grid-cols-6 gap-2.5 text-xs">
           <input type="date" id="expense-date" required class="p-2.5 bg-[#262626] border border-slate-700 text-slate-200 rounded-xl outline-none focus:border-rose-400">
           <input type="number" id="expense-amount" placeholder="金額 (円)" required class="p-2.5 bg-[#262626] border border-slate-700 text-slate-200 rounded-xl outline-none focus:border-rose-400">
           <select id="expense-category" class="p-2.5 bg-[#262626] border border-slate-700 text-slate-200 rounded-xl outline-none focus:border-rose-400">
@@ -191,6 +193,13 @@
             <option value="交通費">交通費</option>
             <option value="趣味・娯楽">趣味・娯楽</option>
             <option value="固定費">固定費</option>
+            <option value="その他">その他</option>
+          </select>
+          <select id="expense-payment" class="p-2.5 bg-[#262626] border border-slate-700 text-slate-200 rounded-xl outline-none focus:border-rose-400">
+            <option value="現金">現金</option>
+            <option value="クレジットカード">クレジットカード</option>
+            <option value="Mobile Suica">Mobile Suica</option>
+            <option value="DeNA Pay">DeNA Pay</option>
             <option value="その他">その他</option>
           </select>
           <input type="text" id="expense-memo" placeholder="メモ" class="p-2.5 bg-[#262626] border border-slate-700 text-slate-200 rounded-xl outline-none focus:border-rose-400">
@@ -261,7 +270,7 @@
 
   </main>
 
-  <!-- 日別詳細モーダル（複数予定の指定フォーマット表示・編集対応） -->
+  <!-- 日別詳細モーダル -->
   <div id="detail-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-[#1a1a1a] border border-slate-800 w-full max-w-md rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in duration-150 text-slate-200">
       <div class="p-4 bg-[#222222] border-b border-slate-800 flex justify-between items-center">
@@ -274,7 +283,7 @@
           <div id="modal-events-list" class="space-y-2 text-slate-300 pl-2">なし</div>
         </div>
         <div>
-          <h4 class="font-bold text-emerald-400 mb-2 flex items-center gap-1"><i data-lucide="check-square" class="w-3.5 h-3.5"></i> タスク (完了・削除操作可)</h4>
+          <h4 class="font-bold text-emerald-400 mb-2 flex items-center gap-1"><i data-lucide="check-square" class="w-3.5 h-3.5"></i> タスク</h4>
           <div id="modal-tasks-list" class="space-y-2 text-slate-300 pl-2">なし</div>
         </div>
         <div>
@@ -519,7 +528,7 @@
       if(!confirm("このタスクを削除しますか？")) return;
       showLoading("タスクを削除中...");
       try {
-        await fetch(`https://www.googleapis.com/tasks/v1/lists/${listId}/tasks/${taskId}`, {
+        const res = await fetch(`https://www.googleapis.com/tasks/v1/lists/${listId}/tasks/${taskId}`, {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${accessToken}` }
         });
@@ -534,9 +543,10 @@
       }
     }
 
+    // スプレッドシート読み込み（A~E列：日付、金額、カテゴリ、決済方法、メモ）
     async function fetchSheetExpenses() {
       try {
-        const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/A2:D1000`, {
+        const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/A2:E1000`, {
           headers: { Authorization: `Bearer ${accessToken}` }
         });
         const data = await res.json();
@@ -544,11 +554,13 @@
           date: row[0],
           amount: parseInt(row[1]) || 0,
           category: row[2] || 'その他',
-          memo: row[3] || ''
+          payment: row[3] || '現金',
+          memo: row[4] || ''
         }));
       } catch (e) { console.error("Sheets fetch error:", e); }
     }
 
+    // スプレッドシート書き込み（決済方法を追加）
     async function addExpenseRecord(e) {
       e.preventDefault();
       if (!accessToken) return alert("Google連携を行ってください");
@@ -557,13 +569,14 @@
       const date = document.getElementById('expense-date').value;
       const amount = document.getElementById('expense-amount').value;
       const category = document.getElementById('expense-category').value;
+      const payment = document.getElementById('expense-payment').value;
       const memo = document.getElementById('expense-memo').value;
 
       try {
         const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/A1:append?valueInputOption=USER_ENTERED`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ values: [[date, amount, category, memo]] })
+          body: JSON.stringify({ values: [[date, amount, category, payment, memo]] })
         });
         if (!res.ok) throw new Error('家計簿の保存に失敗しました');
 
@@ -625,7 +638,6 @@
         const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         const isToday = new Date().toDateString() === new Date(year, month, day).toDateString();
 
-        // 複数日にまたがる予定（旅行など）を判定して該当日にすべて反映
         const dayEvents = eventsData.filter(e => {
           const start = (e.start.dateTime || e.start.date || '').split('T')[0];
           const end = (e.end.dateTime || e.end.date || '').split('T')[0];
@@ -675,7 +687,6 @@
       const dayTasks = tasksData.filter(t => t.due && t.due.startsWith(dateStr));
       const dayExpenses = expensesData.filter(e => e.date === dateStr);
 
-      // ご指定のフォーマット（予定の開始・終了時間 ＋ メモ）
       document.getElementById('modal-events-list').innerHTML = dayEvents.length ? dayEvents.map(e => {
         const startTime = e.start.dateTime ? new Date(e.start.dateTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '終日';
         const endTime = e.end.dateTime ? new Date(e.end.dateTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
@@ -704,7 +715,12 @@
         `;
       }).join('') : '<span class="text-slate-500">なし</span>';
 
-      document.getElementById('modal-expenses-list').innerHTML = dayExpenses.length ? dayExpenses.map(e => `<div class="p-1.5 bg-[#222222] rounded-lg mb-1">・ ${e.category}: ¥${e.amount.toLocaleString()} (${e.memo || 'メモなし'})</div>`).join('') : '<span class="text-slate-500">なし</span>';
+      document.getElementById('modal-expenses-list').innerHTML = dayExpenses.length ? dayExpenses.map(e => `
+        <div class="p-1.5 bg-[#222222] rounded-lg mb-1 flex justify-between items-center text-xs">
+          <span>・ ${e.category} (${e.payment || '現金'}): ¥${e.amount.toLocaleString()}</span>
+          <span class="text-slate-400 text-[11px]">${e.memo || ''}</span>
+        </div>
+      `).join('') : '<span class="text-slate-500">なし</span>';
 
       document.getElementById('detail-modal').classList.remove('hidden');
       lucide.createIcons();
@@ -714,7 +730,6 @@
       document.getElementById('detail-modal').classList.add('hidden');
     }
 
-    // 予定の編集モーダルを開く
     function openEditModal(eventId) {
       const ev = eventsData.find(item => item.id === eventId);
       if(!ev) return;
@@ -863,3 +878,4 @@
   </script>
 </body>
 </html>
+
